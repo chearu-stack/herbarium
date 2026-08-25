@@ -1,4 +1,4 @@
-name: Deploy Frontend
+name: pages-build-deployment
 
 on:
   push:
@@ -13,7 +13,6 @@ jobs:
   deploy:
     environment:
       name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
 
     runs-on: ubuntu-latest
     steps:
@@ -30,5 +29,4 @@ jobs:
           path: public
 
       - name: Deploy
-        id: deploy
         uses: actions/deploy-pages@v2
