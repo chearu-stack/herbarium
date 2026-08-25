@@ -111,17 +111,19 @@ window.createPage = function() {
     document.getElementById("file-" + id).click();
   });
 
+  // Enter в поле русского названия -> запросить AI
   var russianInput = page.querySelector("#title-rus-" + id);
   russianInput.addEventListener("keydown", function(event) {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
-      page.dispatchEvent(new CustomEvent('request-ai', { detail: { id: id } }));
+      page.dispatchEvent(new CustomEvent("request-ai", { detail: { id: id }, bubbles: true }));
     }
   });
 
+  // Кнопка AI -> запросить AI
   var aiButton = page.querySelector("#ai-button-" + id);
   aiButton.addEventListener("click", function() {
-    page.dispatchEvent(new CustomEvent('request-ai', { detail: { id: id } }));
+    page.dispatchEvent(new CustomEvent("request-ai", { detail: { id: id }, bubbles: true }));
   });
   setAIButtonState(aiButton, hasValidApiKey() ? "ready" : "nokey");
 
