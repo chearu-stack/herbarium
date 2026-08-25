@@ -47,9 +47,7 @@ window.requestAI = async function(russianName, provider, apiKey) {
   try {
     result = JSON.parse(content);
   } catch(e) {
-    throw new Error("AI вернул невалидный JSON:
-
-" + content);
+        throw new Error("AI вернул невалидный JSON:\n\n" + content);
   }
 
   var latinName = String(result.latin_name || "").trim();
