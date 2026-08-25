@@ -1,4 +1,4 @@
-// Главный модуль — связывает всё воедино
+// Главный модуль
 
 var pendingAIResult = null;
 var pendingAIPageId = null;
@@ -6,10 +6,8 @@ var pendingAIPageId = null;
 function init() {
   var savedProvider = localStorage.getItem('herbarium_ai_provider');
   var savedKey = localStorage.getItem('herbarium_ai_key');
-
   if (savedProvider) document.getElementById('aiProvider').value = savedProvider;
   if (savedKey) document.getElementById('aiApiKey').value = savedKey;
-
   updateKeyStatus();
   addPage();
   bindGlobalEvents();
@@ -48,7 +46,10 @@ function bindGlobalEvents() {
 
 function addPage() {
   var container = document.getElementById('pagesContainer');
-  container.appendChild(createPage());
+  var page = createPage();
+  container.appendChild(page);
+  // === ИСПРАВЛЕНО: attachImageEditor ПОСЛЕ appendChild, когда элементы в DOM ===
+  attachImageEditor(pageCounter);
   applyBorderStyle();
   updatePageOrderControls();
 }
@@ -84,7 +85,6 @@ function onLoad(e) {
     var pagesData = parsed.pages || [];
     if (pagesData.length === 0) { alert('В файле не найдено ни одного листа.'); e.target.value = ''; return; }
     if (!confirm('Загрузить проект (' + pagesData.length + ' лист(ов))? Текущее содержимое будет заменено.')) { e.target.value = ''; return; }
-
     clearAllPages();
     pendingAIResult = null;
     pendingAIPageId = null;
@@ -98,16 +98,12 @@ function onLoad(e) {
 function saveKeys() {
   var provider = document.getElementById('aiProvider').value;
   var key = document.getElementById('aiApiKey').value.trim();
-
   localStorage.setItem('herbarium_ai_provider', provider);
   localStorage.setItem('herbarium_ai_key', key);
-
   updateKeyStatus();
-
   document.querySelectorAll('.ai-page-button').forEach(function(btn) {
     setAIButtonState(btn, hasValidApiKey() ? 'ready' : 'nokey');
   });
-
   alert('Ключ сохранён в этом браузере.');
 }
 
@@ -125,27 +121,16 @@ function updateKeyStatus() {
 async function handleAIRequest(id) {
   var russianInput = document.getElementById('title-rus-' + id);
   var russianName = russianInput.value.trim();
-
-  if (!russianName) {
-    alert('Сначала введи русское название растения.');
-    russianInput.focus();
-    return;
-  }
+  if (!russianName) { alert('Сначала введи русское название растения.'); russianInput.focus(); return; }
 
   var provider = localStorage.getItem('herbarium_ai_provider') || CONFIG.defaultProvider;
   var apiKey = localStorage.getItem('herbarium_ai_key') || '';
-
-  if (!apiKey) {
-    alert('Не указан API-ключ.\n\nВведи его в настройках AI (боковая панель).');
-    return;
-  }
+  if (!apiKey) { alert('Не указан API-ключ.\n\nВведи его в настройках AI (боковая панель).'); return; }
 
   pendingAIPageId = id;
   pendingAIResult = null;
-
   var panel = document.getElementById('aiPanel');
   panel.classList.add('visible');
-
   document.getElementById('aiLatinResult').textContent = '';
   document.getElementById('aiTaxonomyResult').textContent = '';
   document.getElementById('aiDescriptionResult').textContent = '';
@@ -153,49 +138,37 @@ async function handleAIRequest(id) {
   document.getElementById('applyAiButton').disabled = true;
 
   var pageButton = document.getElementById('ai-button-' + id);
-  if (pageButton) {
-    setAIButtonState(pageButton, 'loading');
-    pageButton.disabled = true;
-  }
+  if (pageButton) { setAIButtonState(pageButton, 'loading'); pageButton.disabled = true; }
 
   try {
     var result = await requestAI(russianName, provider, apiKey);
-
     pendingAIResult = result;
-
     document.getElementById('aiLatinResult').textContent = result.latin_name;
     document.getElementById('aiTaxonomyResult').textContent =
       'Класс: ' + result.class + '\nСемейство: ' + result.family + '\nРод: ' + result.genus + '\nВид: ' + result.species;
     document.getElementById('aiDescriptionResult').textContent = result.description;
     document.getElementById('aiStatus').textContent = 'Проверь результат. Если всё устраивает — нажми «ПРИМЕНИТЬ».';
     document.getElementById('applyAiButton').disabled = false;
-
   } catch (error) {
     console.error('AI error:', error);
     document.getElementById('aiStatus').textContent = 'Ошибка при обращении к AI.';
     alert('Не удалось получить данные от AI.\n\n' + error.message);
   } finally {
     var pageButton = document.getElementById('ai-button-' + id);
-    if (pageButton) {
-      setAIButtonState(pageButton, hasValidApiKey() ? 'ready' : 'nokey');
-      pageButton.disabled = false;
-    }
+    if (pageButton) { setAIButtonState(pageButton, hasValidApiKey() ? 'ready' : 'nokey'); pageButton.disabled = false; }
   }
 }
 
 function applyAIResult() {
   if (!pendingAIResult || !pendingAIPageId) return;
   var id = pendingAIPageId;
-
   document.getElementById('title-lat-' + id).value = pendingAIResult.latin_name;
   document.getElementById('tax-class-' + id).textContent = pendingAIResult.class;
   document.getElementById('tax-family-' + id).textContent = pendingAIResult.family;
   document.getElementById('tax-genus-' + id).textContent = pendingAIResult.genus;
   document.getElementById('tax-species-' + id).textContent = pendingAIResult.species;
-
   var descriptionField = document.getElementById('description-' + id);
   descriptionField.value = pendingAIResult.description;
-
   closeAIPanel();
   descriptionField.focus();
   descriptionField.setSelectionRange(descriptionField.value.length, descriptionField.value.length);
@@ -207,5 +180,4 @@ function closeAIPanel() {
   pendingAIPageId = null;
 }
 
-// Старт
 init();

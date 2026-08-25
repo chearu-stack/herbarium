@@ -91,8 +91,7 @@ window.createPage = function() {
     if (file) loadImageFile(file, id);
   });
 
-  // === ИСПРАВЛЕНО: передаём page, чтобы искать внутри него ===
-  attachImageEditor(page, id);
+  // === attachImageEditor ВЫНЕСЕН отсюда — вызывается ПОСЛЕ appendChild ===
 
   page.querySelector(".img-zoom-out[data-id='" + id + "']").addEventListener("click", function(e) {
     e.stopPropagation();
@@ -188,7 +187,6 @@ window.getAllPagesData = function() {
     var hasImage = document.getElementById("imgBox-" + id).classList.contains("has-image");
     var t = imageTransforms[id];
 
-    // Убрано ?. — используем обычные проверки
     var elTitleRus = document.getElementById("title-rus-" + id);
     var elTitleLat = document.getElementById("title-lat-" + id);
     var elTaxClass = document.getElementById("tax-class-" + id);
@@ -227,6 +225,9 @@ window.restorePages = function(pagesData) {
   pagesData.forEach(function(pd) {
     var page = createPage();
     container.appendChild(page);
+    // === ИСПРАВЛЕНО: attachImageEditor ПОСЛЕ appendChild ===
+    attachImageEditor(pageCounter);
+
     var id = pageCounter;
 
     document.getElementById("area-" + id).classList.remove("mode-full", "mode-left", "mode-none");

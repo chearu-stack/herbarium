@@ -24,18 +24,14 @@ window.initImageTransform = function(id) {
   var img = document.getElementById("img-" + id);
   var box = document.getElementById("imgBox-" + id);
   if (!img || !box || !img.naturalWidth) return;
-
   var boxRect = box.getBoundingClientRect();
   var t = getImageTransform(id);
   t.naturalWidth = img.naturalWidth;
   t.naturalHeight = img.naturalHeight;
-
   var scaleW = boxRect.width / img.naturalWidth;
   var scaleH = boxRect.height / img.naturalHeight;
   t.scale = Math.min(scaleW, scaleH);
-  t.x = 0;
-  t.y = 0;
-
+  t.x = 0; t.y = 0;
   applyImageTransform(id);
 };
 
@@ -45,9 +41,7 @@ window.zoomImage = function(id, factor) {
   applyImageTransform(id);
 };
 
-window.resetImageTransform = function(id) {
-  initImageTransform(id);
-};
+window.resetImageTransform = function(id) { initImageTransform(id); };
 
 window.getTransformData = function(id) {
   var t = imageTransforms[id];
@@ -57,29 +51,18 @@ window.getTransformData = function(id) {
 window.setTransformData = function(id, data) {
   if (!data) return;
   imageTransforms[id] = {
-    scale: data.scale || 1,
-    x: data.x || 0,
-    y: data.y || 0,
-    naturalWidth: 0,
-    naturalHeight: 0
+    scale: data.scale || 1, x: data.x || 0, y: data.y || 0,
+    naturalWidth: 0, naturalHeight: 0
   };
   applyImageTransform(id);
 };
 
 function startPan(id, clientX, clientY) {
   var t = getImageTransform(id);
-  panState = {
-    active: true,
-    startX: clientX,
-    startY: clientY,
-    initialX: t.x,
-    initialY: t.y,
-    id: id
-  };
+  panState = { active: true, startX: clientX, startY: clientY, initialX: t.x, initialY: t.y, id: id };
   var img = document.getElementById("img-" + id);
   if (img) img.style.cursor = "grabbing";
 }
-
 function movePan(clientX, clientY) {
   if (!panState.active) return;
   var dx = clientX - panState.startX;
@@ -89,7 +72,6 @@ function movePan(clientX, clientY) {
   t.y = panState.initialY + dy;
   applyImageTransform(panState.id);
 }
-
 function endPan() {
   if (panState.id) {
     var img = document.getElementById("img-" + panState.id);
@@ -109,10 +91,14 @@ document.addEventListener("touchmove", function(e) {
 }, { passive: false });
 document.addEventListener("touchend", endPan);
 
+// === ИСПРАВЛЕНО: ищем элементы в DOM через getElementById ===
 window.attachImageEditor = function(id) {
   var imgBox = document.getElementById("imgBox-" + id);
   var img = document.getElementById("img-" + id);
-  if (!imgBox || !img) return;
+  if (!imgBox || !img) {
+    console.warn("attachImageEditor: не найден imgBox или img для id=" + id);
+    return;
+  }
 
   imgBox.addEventListener("wheel", function(event) {
     if (!imgBox.classList.contains("has-image")) return;
