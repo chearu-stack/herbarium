@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Шаблонизатор гербариев А4</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="sidebar">
+
+  <div class="controls">
+    <div class="sidebar-title">Управление</div>
+    <button id="btnAddPage">+ Добавить страницу</button>
+    <button id="btnPrint">🖨 Печать</button>
+    <button id="btnClear">Очистить всё</button>
+
+    <div class="border-style-options">
+      <button id="btnSave">💾 Сохранить проект</button>
+      <button id="btnLoadTrigger">📂 Загрузить проект</button>
+      <input type="file" id="loadProjectInput" accept=".json" style="display:none">
+    </div>
+
+    <div class="border-style-options">
+      <label><input type="radio" name="borderStyle" value="mode-full" checked> Полная рамка</label>
+      <label><input type="radio" name="borderStyle" value="mode-left"> Только слева (дырокол)</label>
+      <label><input type="radio" name="borderStyle" value="mode-none"> Без рамок</label>
+    </div>
+  </div>
+
+  <!-- НАСТРОЙКИ AI — только провайдер и ключ -->
+  <div class="ai-settings" id="aiSettings">
+    <div class="sidebar-title">Настройки AI</div>
+    <div class="ai-setting-row">
+      <label>Провайдер:</label>
+      <select id="aiProvider">
+        <option value="deepseek">DeepSeek</option>
+        <option value="yandex">Yandex GPT</option>
+      </select>
+    </div>
+    <div class="ai-setting-row">
+      <label>API-ключ:</label>
+      <input type="password" id="aiApiKey" placeholder="Вставь свой ключ...">
+    </div>
+    <button id="btnSaveKeys" style="margin-top:6px">💾 Сохранить ключ</button>
+    <div class="ai-status-mini" id="aiKeyStatus">Ключ не сохранён</div>
+  </div>
+
+  <!-- ОКНО ПРОВЕРКИ AI -->
+  <div class="ai-panel" id="aiPanel">
+    <div class="ai-panel-title">Проверка данных AI</div>
+    <div class="ai-status" id="aiStatus">Здесь появится результат.</div>
+
+    <div class="ai-result">
+      <div class="ai-result-row">
+        <div class="ai-result-label">ЛАТИНСКОЕ НАЗВАНИЕ</div>
+        <div class="ai-result-value" id="aiLatinResult"></div>
+      </div>
+      <div class="ai-result-row">
+        <div class="ai-result-label">ТАКСОНОМИЯ</div>
+        <div class="ai-result-value" id="aiTaxonomyResult"></div>
+      </div>
+      <div class="ai-result-row">
+        <div class="ai-result-label">ОПИСАНИЕ</div>
+        <div class="ai-result-value" id="aiDescriptionResult"></div>
+      </div>
+    </div>
+
+    <div class="ai-actions">
+      <button class="apply-button" id="applyAiButton" disabled>ПРИМЕНИТЬ</button>
+      <button id="cancelAiButton">Отмена</button>
+    </div>
+  </div>
+
+</div>
+
+<div class="main-content">
+  <div class="pages-container" id="pagesContainer"></div>
+</div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
