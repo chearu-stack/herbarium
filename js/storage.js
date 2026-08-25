@@ -1,33 +1,26 @@
-// Сохранение и загрузка проекта
+// Сохранение / загрузка проекта
 
-export function saveProject(pagesData) {
-  const json = JSON.stringify({ 
-    savedAt: new Date().toISOString(), 
-    pages: pagesData 
-  }, null, 2);
-
-  const blob = new Blob([json], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
+window.saveProject = function(pagesData) {
+  var json = JSON.stringify({ savedAt: new Date().toISOString(), pages: pagesData }, null, 2);
+  var blob = new Blob([json], { type: "application/json" });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
   a.href = url;
-  const stamp = new Date().toISOString().slice(0, 10);
-  a.download = `гербарий_${stamp}.json`;
+  a.download = "гербарий_" + new Date().toISOString().slice(0, 10) + ".json";
   a.click();
   URL.revokeObjectURL(url);
-}
+};
 
-export async function loadProject(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = e => {
-      try {
-        const parsed = JSON.parse(e.target.result);
-        resolve(parsed);
-      } catch (err) {
-        reject(new Error("Не корректный JSON проекта"));
-      }
-    };
-    reader.onerror = () => reject(new Error("Ошибка чтения файла"));
-    reader.readAsText(file);
-  });
-}
+window.loadProjectFile = function(file, callback) {
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var parsed = JSON.parse(e.target.result);
+      callback(null, parsed);
+    } catch (err) {
+      callback(new Error("Не корректный JSON проекта"));
+    }
+  };
+  reader.onerror = function() { callback(new Error("Ошибка чтения файла")); };
+  reader.readAsText(file);
+};

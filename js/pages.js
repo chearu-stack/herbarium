@@ -1,17 +1,12 @@
-// Создание и управление страницами гербария
+// Создание и управление страницами
 
-import { attachImageEditor, initTransform, getTransformData, setTransformData } from './image-editor.js';
-import { setAIButtonState, hasValidApiKey } from './utils.js';
+window.pageCounter = 0;
 
-let pageCounter = 0;
-
-export function getPageCounter() { return pageCounter; }
-
-export function createPage() {
+window.createPage = function() {
   pageCounter++;
-  const id = pageCounter;
+  var id = pageCounter;
 
-  const page = document.createElement("div");
+  var page = document.createElement("div");
   page.className = "page";
 
   page.innerHTML = `
@@ -46,22 +41,10 @@ export function createPage() {
 
         <div class="right-half">
           <div class="taxonomy-block">
-            <div class="taxonomy-row">
-              <span class="taxonomy-label">КЛАСС:</span>
-              <div class="taxonomy-input" id="tax-class-${id}" contenteditable="true" data-placeholder="..."></div>
-            </div>
-            <div class="taxonomy-row">
-              <span class="taxonomy-label">СЕМЕЙСТВО:</span>
-              <div class="taxonomy-input" id="tax-family-${id}" contenteditable="true" data-placeholder="..."></div>
-            </div>
-            <div class="taxonomy-row">
-              <span class="taxonomy-label">РОД:</span>
-              <div class="taxonomy-input" id="tax-genus-${id}" contenteditable="true" data-placeholder="..."></div>
-            </div>
-            <div class="taxonomy-row">
-              <span class="taxonomy-label">ВИД:</span>
-              <div class="taxonomy-input" id="tax-species-${id}" contenteditable="true" data-placeholder="..."></div>
-            </div>
+            <div class="taxonomy-row"><span class="taxonomy-label">КЛАСС:</span><div class="taxonomy-input" id="tax-class-${id}" contenteditable="true" data-placeholder="..."></div></div>
+            <div class="taxonomy-row"><span class="taxonomy-label">СЕМЕЙСТВО:</span><div class="taxonomy-input" id="tax-family-${id}" contenteditable="true" data-placeholder="..."></div></div>
+            <div class="taxonomy-row"><span class="taxonomy-label">РОД:</span><div class="taxonomy-input" id="tax-genus-${id}" contenteditable="true" data-placeholder="..."></div></div>
+            <div class="taxonomy-row"><span class="taxonomy-label">ВИД:</span><div class="taxonomy-input" id="tax-species-${id}" contenteditable="true" data-placeholder="..."></div></div>
           </div>
           <div class="description-block">
             <div class="description-label">ОПИСАНИЕ</div>
@@ -70,212 +53,206 @@ export function createPage() {
         </div>
       </div>
 
-      <div class="middle-section">
-        <div class="middle-label">ЗДЕСЬ ВКЛЕИВАЕТСЯ<br>СУХОЦВЕТ</div>
-      </div>
+      <div class="middle-section"><div class="middle-label">ЗДЕСЬ ВКЛЕИВАЕТСЯ<br>СУХОЦВЕТ</div></div>
 
       <div class="footer-section">
         <div class="footer-group">
-          <div class="footer-left">
-            <span class="footer-label">Место сбора:</span>
-            <input type="text" class="footer-input" id="collection-place-${id}" placeholder="...">
-          </div>
-          <div class="footer-right">
-            <span class="footer-label">Дата:</span>
-            <input type="text" class="footer-input" id="collection-date-${id}" placeholder="...">
-          </div>
+          <div class="footer-left"><span class="footer-label">Место сбора:</span><input type="text" class="footer-input" id="collection-place-${id}" placeholder="..."></div>
+          <div class="footer-right"><span class="footer-label">Дата:</span><input type="text" class="footer-input" id="collection-date-${id}" placeholder="..."></div>
         </div>
       </div>
     </div>
   `;
 
-  // Drag & Drop
-  const imgBox = page.querySelector(`#imgBox-${id}`);
-  imgBox.addEventListener("dragover", event => {
+  var imgBox = page.querySelector("#imgBox-" + id);
+
+  imgBox.addEventListener("dragover", function(event) {
     event.preventDefault();
     imgBox.style.background = "#f8f8f8";
   });
-  imgBox.addEventListener("dragleave", () => {
+  imgBox.addEventListener("dragleave", function() {
     imgBox.style.background = "transparent";
   });
-  imgBox.addEventListener("drop", event => {
+  imgBox.addEventListener("drop", function(event) {
     event.preventDefault();
     imgBox.style.background = "transparent";
-    const file = event.dataTransfer.files[0];
-    if (file && file.type && file.type.startsWith("image/")) {
-      loadImageFile(file, id);
-    }
+    var file = event.dataTransfer.files[0];
+    if (file && file.type && file.type.startsWith("image/")) loadImageFile(file, id);
   });
 
-  // Placeholder click
-  const placeholder = page.querySelector(`#imgPlaceholder-${id}`);
-  placeholder.addEventListener("click", () => {
-    document.getElementById(`file-${id}`).click();
+  var placeholder = page.querySelector("#imgPlaceholder-" + id);
+  placeholder.addEventListener("click", function() {
+    document.getElementById("file-" + id).click();
   });
 
-  // File input
-  const fileInput = page.querySelector(`#file-${id}`);
-  fileInput.addEventListener("change", (e) => {
-    const file = e.target.files[0];
+  var fileInput = page.querySelector("#file-" + id);
+  fileInput.addEventListener("change", function(e) {
+    var file = e.target.files[0];
     if (file) loadImageFile(file, id);
   });
 
-  // Image editor (zoom, pan)
   attachImageEditor(id);
 
-  // Image control buttons
-  page.querySelector(`.img-zoom-out[data-id="${id}"]`).addEventListener("click", (e) => {
+  page.querySelector(".img-zoom-out[data-id='" + id + "']").addEventListener("click", function(e) {
     e.stopPropagation();
-    import('./image-editor.js').then(m => m.zoom(id, 0.85));
+    zoomImage(id, 0.85);
   });
-  page.querySelector(`.img-zoom-in[data-id="${id}"]`).addEventListener("click", (e) => {
+  page.querySelector(".img-zoom-in[data-id='" + id + "']").addEventListener("click", function(e) {
     e.stopPropagation();
-    import('./image-editor.js').then(m => m.zoom(id, 1.15));
+    zoomImage(id, 1.15);
   });
-  page.querySelector(`.img-reset[data-id="${id}"]`).addEventListener("click", (e) => {
+  page.querySelector(".img-reset[data-id='" + id + "']").addEventListener("click", function(e) {
     e.stopPropagation();
-    import('./image-editor.js').then(m => m.reset(id));
-  });
-
-  // Select file button inside placeholder
-  page.querySelector(`.btn-select-file[data-id="${id}"]`).addEventListener("click", (e) => {
-    e.stopPropagation();
-    document.getElementById(`file-${id}`).click();
+    resetImageTransform(id);
   });
 
-  // Enter on russian name -> trigger AI
-  const russianInput = page.querySelector(`#title-rus-${id}`);
-  russianInput.addEventListener("keydown", event => {
+  page.querySelector(".btn-select-file[data-id='" + id + "']").addEventListener("click", function(e) {
+    e.stopPropagation();
+    document.getElementById("file-" + id).click();
+  });
+
+  var russianInput = page.querySelector("#title-rus-" + id);
+  russianInput.addEventListener("keydown", function(event) {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
-      page.dispatchEvent(new CustomEvent('request-ai', { detail: { id } }));
+      page.dispatchEvent(new CustomEvent('request-ai', { detail: { id: id } }));
     }
   });
 
-  // AI button
-  const aiButton = page.querySelector(`#ai-button-${id}`);
-  aiButton.addEventListener("click", () => {
-    page.dispatchEvent(new CustomEvent('request-ai', { detail: { id } }));
+  var aiButton = page.querySelector("#ai-button-" + id);
+  aiButton.addEventListener("click", function() {
+    page.dispatchEvent(new CustomEvent('request-ai', { detail: { id: id } }));
   });
   setAIButtonState(aiButton, hasValidApiKey() ? "ready" : "nokey");
 
   return page;
-}
+};
 
-export function loadImageFile(file, id) {
+window.loadImageFile = function(file, id) {
   if (!file.type || !file.type.startsWith("image/")) {
     alert("Можно загрузить только изображение.");
     return;
   }
-  const reader = new FileReader();
-  reader.onload = event => {
-    const img = document.getElementById(`img-${id}`);
-    const box = document.getElementById(`imgBox-${id}`);
+  var reader = new FileReader();
+  reader.onload = function(event) {
+    var img = document.getElementById("img-" + id);
+    var box = document.getElementById("imgBox-" + id);
     img.src = event.target.result;
-    img.onload = () => {
+    img.onload = function() {
       box.classList.add("has-image");
-      initTransform(id);
+      delete imageTransforms[id];
+      initImageTransform(id);
     };
   };
   reader.readAsDataURL(file);
-}
+};
 
-export function movePage(id, direction) {
-  const container = document.getElementById("pagesContainer");
-  const area = document.getElementById(`area-${id}`);
+window.movePage = function(id, direction) {
+  var container = document.getElementById("pagesContainer");
+  var area = document.getElementById("area-" + id);
   if (!area) return;
-  const page = area.closest(".page");
+  var page = area.closest(".page");
   if (!page) return;
-
   if (direction < 0 && page.previousElementSibling) {
     container.insertBefore(page, page.previousElementSibling);
   } else if (direction > 0 && page.nextElementSibling) {
     container.insertBefore(page.nextElementSibling, page);
   }
   updatePageOrderControls();
-}
+};
 
-export function updatePageOrderControls() {
-  const pages = document.querySelectorAll("#pagesContainer .page");
-  pages.forEach((page, index) => {
-    const up = page.querySelector(".order-button[data-dir='-1']");
-    const down = page.querySelector(".order-button[data-dir='1']");
+window.updatePageOrderControls = function() {
+  var pages = document.querySelectorAll("#pagesContainer .page");
+  pages.forEach(function(page, index) {
+    var area = page.querySelector(".content-area");
+    var pid = area.id.replace("area-", "");
+    var up = page.querySelector("#order-up-" + pid);
+    var down = page.querySelector("#order-down-" + pid);
     if (up) up.disabled = (index === 0);
     if (down) down.disabled = (index === pages.length - 1);
   });
-}
+};
 
-export function getAllPagesData() {
-  const pages = document.querySelectorAll("#pagesContainer .page");
-  const data = [];
-  pages.forEach(page => {
-    const area = page.querySelector(".content-area");
-    const id = area.id.replace("area-", "");
-    const borderMode = ["mode-full", "mode-left", "mode-none"]
-      .find(m => area.classList.contains(m)) || "mode-full";
+window.getAllPagesData = function() {
+  var pages = document.querySelectorAll("#pagesContainer .page");
+  var data = [];
+  pages.forEach(function(page) {
+    var area = page.querySelector(".content-area");
+    var id = area.id.replace("area-", "");
+    var borderMode = ["mode-full", "mode-left", "mode-none"].find(function(m) {
+      return area.classList.contains(m);
+    }) || "mode-full";
 
-    const imgEl = document.getElementById(`img-${id}`);
-    const hasImage = document.getElementById(`imgBox-${id}`).classList.contains("has-image");
+    var imgEl = document.getElementById("img-" + id);
+    var hasImage = document.getElementById("imgBox-" + id).classList.contains("has-image");
+    var t = imageTransforms[id];
 
     data.push({
-      borderMode,
-      titleRus: document.getElementById(`title-rus-${id}`)?.value || "",
-      titleLat: document.getElementById(`title-lat-${id}`)?.value || "",
-      taxClass: document.getElementById(`tax-class-${id}`)?.textContent || "",
-      taxFamily: document.getElementById(`tax-family-${id}`)?.textContent || "",
-      taxGenus: document.getElementById(`tax-genus-${id}`)?.textContent || "",
-      taxSpecies: document.getElementById(`tax-species-${id}`)?.textContent || "",
-      description: document.getElementById(`description-${id}`)?.value || "",
-      collectionPlace: document.getElementById(`collection-place-${id}`)?.value || "",
-      collectionDate: document.getElementById(`collection-date-${id}`)?.value || "",
+      borderMode: borderMode,
+      titleRus: document.getElementById("title-rus-" + id)?.value || "",
+      titleLat: document.getElementById("title-lat-" + id)?.value || "",
+      taxClass: document.getElementById("tax-class-" + id)?.textContent || "",
+      taxFamily: document.getElementById("tax-family-" + id)?.textContent || "",
+      taxGenus: document.getElementById("tax-genus-" + id)?.textContent || "",
+      taxSpecies: document.getElementById("tax-species-" + id)?.textContent || "",
+      description: document.getElementById("description-" + id)?.value || "",
+      collectionPlace: document.getElementById("collection-place-" + id)?.value || "",
+      collectionDate: document.getElementById("collection-date-" + id)?.value || "",
       image: hasImage ? imgEl.src : null,
-      transform: getTransformData(id)
+      transform: t ? { scale: t.scale, x: t.x, y: t.y } : null
     });
   });
   return data;
-}
+};
 
-export function clearAllPages() {
+window.clearAllPages = function() {
   document.getElementById("pagesContainer").innerHTML = "";
   pageCounter = 0;
-}
+};
 
-export function restorePages(pagesData) {
-  const container = document.getElementById("pagesContainer");
-  pagesData.forEach(pd => {
-    const page = createPage();
+window.restorePages = function(pagesData) {
+  var container = document.getElementById("pagesContainer");
+  pagesData.forEach(function(pd) {
+    var page = createPage();
     container.appendChild(page);
-    const id = pageCounter;
+    var id = pageCounter;
 
-    document.getElementById(`area-${id}`).classList.remove("mode-full", "mode-left", "mode-none");
-    document.getElementById(`area-${id}`).classList.add(pd.borderMode || "mode-full");
+    document.getElementById("area-" + id).classList.remove("mode-full", "mode-left", "mode-none");
+    document.getElementById("area-" + id).classList.add(pd.borderMode || "mode-full");
 
-    document.getElementById(`title-rus-${id}`).value = pd.titleRus || "";
-    document.getElementById(`title-lat-${id}`).value = pd.titleLat || "";
-    document.getElementById(`tax-class-${id}`).textContent = pd.taxClass || "";
-    document.getElementById(`tax-family-${id}`).textContent = pd.taxFamily || "";
-    document.getElementById(`tax-genus-${id}`).textContent = pd.taxGenus || "";
-    document.getElementById(`tax-species-${id}`).textContent = pd.taxSpecies || "";
-    document.getElementById(`description-${id}`).value = pd.description || "";
-    document.getElementById(`collection-place-${id}`).value = pd.collectionPlace || "";
-    document.getElementById(`collection-date-${id}`).value = pd.collectionDate || "";
+    document.getElementById("title-rus-" + id).value = pd.titleRus || "";
+    document.getElementById("title-lat-" + id).value = pd.titleLat || "";
+    document.getElementById("tax-class-" + id).textContent = pd.taxClass || "";
+    document.getElementById("tax-family-" + id).textContent = pd.taxFamily || "";
+    document.getElementById("tax-genus-" + id).textContent = pd.taxGenus || "";
+    document.getElementById("tax-species-" + id).textContent = pd.taxSpecies || "";
+    document.getElementById("description-" + id).value = pd.description || "";
+    document.getElementById("collection-place-" + id).value = pd.collectionPlace || "";
+    document.getElementById("collection-date-" + id).value = pd.collectionDate || "";
 
     if (pd.image) {
-      const img = document.getElementById(`img-${id}`);
-      const box = document.getElementById(`imgBox-${id}`);
+      var img = document.getElementById("img-" + id);
+      var box = document.getElementById("imgBox-" + id);
       img.src = pd.image;
-      img.onload = () => {
+      img.onload = function() {
         box.classList.add("has-image");
         if (pd.transform) {
-          setTransformData(id, pd.transform);
+          imageTransforms[id] = {
+            scale: pd.transform.scale || 1,
+            x: pd.transform.x || 0,
+            y: pd.transform.y || 0,
+            naturalWidth: img.naturalWidth,
+            naturalHeight: img.naturalHeight
+          };
+          applyImageTransform(id);
         } else {
-          initTransform(id);
+          initImageTransform(id);
         }
       };
     }
 
-    const button = document.getElementById(`ai-button-${id}`);
+    var button = document.getElementById("ai-button-" + id);
     setAIButtonState(button, hasValidApiKey() ? "ready" : "nokey");
   });
   updatePageOrderControls();
-}
+};

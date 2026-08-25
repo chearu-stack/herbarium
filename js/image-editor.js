@@ -1,73 +1,73 @@
 // Интерактивное кадрирование изображений
 
-const transforms = {}; // id -> { scale, x, y, naturalWidth, naturalHeight }
+window.imageTransforms = {};
 
-let panState = { active: false, startX: 0, startY: 0, initialX: 0, initialY: 0, id: null };
-let clickStartPos = null;
+var panState = { active: false, startX: 0, startY: 0, initialX: 0, initialY: 0, id: null };
+var clickStartPos = null;
 
-export function getTransform(id) {
-  if (!transforms[id]) {
-    transforms[id] = { scale: 1, x: 0, y: 0, naturalWidth: 0, naturalHeight: 0 };
+window.getImageTransform = function(id) {
+  if (!imageTransforms[id]) {
+    imageTransforms[id] = { scale: 1, x: 0, y: 0, naturalWidth: 0, naturalHeight: 0 };
   }
-  return transforms[id];
-}
+  return imageTransforms[id];
+};
 
-export function applyTransform(id) {
-  const img = document.getElementById(`img-${id}`);
-  const t = getTransform(id);
+window.applyImageTransform = function(id) {
+  var img = document.getElementById("img-" + id);
+  var t = getImageTransform(id);
   if (img && t) {
-    img.style.transform = `translate(-50%, -50%) translate(${t.x}px, ${t.y}px) scale(${t.scale})`;
+    img.style.transform = "translate(-50%, -50%) translate(" + t.x + "px, " + t.y + "px) scale(" + t.scale + ")";
   }
-}
+};
 
-export function initTransform(id) {
-  const img = document.getElementById(`img-${id}`);
-  const box = document.getElementById(`imgBox-${id}`);
+window.initImageTransform = function(id) {
+  var img = document.getElementById("img-" + id);
+  var box = document.getElementById("imgBox-" + id);
   if (!img || !box || !img.naturalWidth) return;
 
-  const boxRect = box.getBoundingClientRect();
-  const t = getTransform(id);
+  var boxRect = box.getBoundingClientRect();
+  var t = getImageTransform(id);
   t.naturalWidth = img.naturalWidth;
   t.naturalHeight = img.naturalHeight;
 
-  const scaleW = boxRect.width / img.naturalWidth;
-  const scaleH = boxRect.height / img.naturalHeight;
+  var scaleW = boxRect.width / img.naturalWidth;
+  var scaleH = boxRect.height / img.naturalHeight;
   t.scale = Math.min(scaleW, scaleH);
   t.x = 0;
   t.y = 0;
 
-  applyTransform(id);
-}
+  applyImageTransform(id);
+};
 
-export function zoom(id, factor) {
-  const t = getTransform(id);
+window.zoomImage = function(id, factor) {
+  var t = getImageTransform(id);
   t.scale = Math.max(0.05, Math.min(10, t.scale * factor));
-  applyTransform(id);
-}
+  applyImageTransform(id);
+};
 
-export function reset(id) {
-  initTransform(id);
-}
+window.resetImageTransform = function(id) {
+  initImageTransform(id);
+};
 
-export function getTransformData(id) {
-  const t = transforms[id];
+window.getTransformData = function(id) {
+  var t = imageTransforms[id];
   return t ? { scale: t.scale, x: t.x, y: t.y } : null;
-}
+};
 
-export function setTransformData(id, data) {
+window.setTransformData = function(id, data) {
   if (!data) return;
-  transforms[id] = {
+  imageTransforms[id] = {
     scale: data.scale || 1,
     x: data.x || 0,
     y: data.y || 0,
     naturalWidth: 0,
     naturalHeight: 0
   };
-  applyTransform(id);
-}
+  applyImageTransform(id);
+};
 
 function startPan(id, clientX, clientY) {
-  const t = getTransform(id);
+  var t = getImageTransform(id);
   panState = {
     active: true,
     startX: clientX,
@@ -76,33 +76,32 @@ function startPan(id, clientX, clientY) {
     initialY: t.y,
     id: id
   };
-  const img = document.getElementById(`img-${id}`);
+  var img = document.getElementById("img-" + id);
   if (img) img.style.cursor = "grabbing";
 }
 
 function movePan(clientX, clientY) {
   if (!panState.active) return;
-  const dx = clientX - panState.startX;
-  const dy = clientY - panState.startY;
-  const t = getTransform(panState.id);
+  var dx = clientX - panState.startX;
+  var dy = clientY - panState.startY;
+  var t = getImageTransform(panState.id);
   t.x = panState.initialX + dx;
   t.y = panState.initialY + dy;
-  applyTransform(panState.id);
+  applyImageTransform(panState.id);
 }
 
 function endPan() {
   if (panState.id) {
-    const img = document.getElementById(`img-${panState.id}`);
+    var img = document.getElementById("img-" + panState.id);
     if (img) img.style.cursor = "grab";
   }
   panState = { active: false, startX: 0, startY: 0, initialX: 0, initialY: 0, id: null };
-  setTimeout(() => { clickStartPos = null; }, 50);
+  setTimeout(function() { clickStartPos = null; }, 50);
 }
 
-// Глобальные обработчики
-document.addEventListener("mousemove", e => movePan(e.clientX, e.clientY));
+document.addEventListener("mousemove", function(e) { movePan(e.clientX, e.clientY); });
 document.addEventListener("mouseup", endPan);
-document.addEventListener("touchmove", e => {
+document.addEventListener("touchmove", function(e) {
   if (panState.active && e.touches.length === 1) {
     e.preventDefault();
     movePan(e.touches[0].clientX, e.touches[0].clientY);
@@ -110,30 +109,26 @@ document.addEventListener("touchmove", e => {
 }, { passive: false });
 document.addEventListener("touchend", endPan);
 
-export function attachImageEditor(id) {
-  const imgBox = document.getElementById(`imgBox-${id}`);
-  const img = document.getElementById(`img-${id}`);
-
+window.attachImageEditor = function(id) {
+  var imgBox = document.getElementById("imgBox-" + id);
+  var img = document.getElementById("img-" + id);
   if (!imgBox || !img) return;
 
-  // Wheel zoom
-  imgBox.addEventListener("wheel", event => {
+  imgBox.addEventListener("wheel", function(event) {
     if (!imgBox.classList.contains("has-image")) return;
     event.preventDefault();
-    const factor = event.deltaY < 0 ? 1.12 : 0.88;
-    zoom(id, factor);
+    var factor = event.deltaY < 0 ? 1.12 : 0.88;
+    zoomImage(id, factor);
   }, { passive: false });
 
-  // Mouse pan
-  img.addEventListener("mousedown", event => {
+  img.addEventListener("mousedown", function(event) {
     if (!imgBox.classList.contains("has-image")) return;
     event.preventDefault();
     clickStartPos = { x: event.clientX, y: event.clientY };
     startPan(id, event.clientX, event.clientY);
   });
 
-  // Touch pan
-  img.addEventListener("touchstart", event => {
+  img.addEventListener("touchstart", function(event) {
     if (!imgBox.classList.contains("has-image")) return;
     if (event.touches.length === 1) {
       clickStartPos = { x: event.touches[0].clientX, y: event.touches[0].clientY };
@@ -141,17 +136,14 @@ export function attachImageEditor(id) {
     }
   }, { passive: false });
 
-  // Click to replace (if not panned)
-  imgBox.addEventListener("click", (e) => {
+  imgBox.addEventListener("click", function(e) {
     if (!imgBox.classList.contains("has-image")) return;
     if (e.target.closest(".image-controls")) return;
     if (clickStartPos) {
-      const cx = e.clientX || e.changedTouches?.[0]?.clientX || clickStartPos.x;
-      const cy = e.clientY || e.changedTouches?.[0]?.clientY || clickStartPos.y;
-      const dx = cx - clickStartPos.x;
-      const dy = cy - clickStartPos.y;
-      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) return;
+      var cx = e.clientX || (e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientX : clickStartPos.x);
+      var cy = e.clientY || (e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientY : clickStartPos.y);
+      if (Math.abs(cx - clickStartPos.x) > 4 || Math.abs(cy - clickStartPos.y) > 4) return;
     }
-    document.getElementById(`file-${id}`).click();
+    document.getElementById("file-" + id).click();
   });
-}
+};

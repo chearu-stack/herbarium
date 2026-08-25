@@ -1,17 +1,14 @@
-// Универсальный клиент для AI через прокси
+// AI-клиент — запросы через прокси
 
-import { CONFIG } from './config.js';
-import { SYSTEM_PROMPT, getModel } from './ai-providers.js';
-
-export async function requestAI(russianName, provider, apiKey) {
+window.requestAI = async function(russianName, provider, apiKey) {
   if (!apiKey) {
-    throw new Error('Не указан API-ключ. Введи его в настройках AI (боковая панель).');
+    throw new Error("Не указан API-ключ. Введи его в настройках AI (боковая панель).");
   }
 
-  const url = `${CONFIG.proxyUrl}/api/ai/${provider}`;
-  const model = getModel(provider);
+  var url = CONFIG.proxyUrl + "/api/ai/" + provider;
+  var model = getModel(provider);
 
-  const response = await fetch(url, {
+  var response = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -21,7 +18,7 @@ export async function requestAI(russianName, provider, apiKey) {
       model: model,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: `Русское название растения: ${russianName}` }
+        { role: "user", content: "Русское название растения: " + russianName }
       ],
       response_format: { type: "json_object" },
       temperature: 0.2,
@@ -31,32 +28,32 @@ export async function requestAI(russianName, provider, apiKey) {
   });
 
   if (!response.ok) {
-    let errorText = "";
+    var errorText = "";
     try {
-      const errorData = await response.json();
-      errorText = errorData?.error?.message || JSON.stringify(errorData);
-    } catch {
+      var errorData = await response.json();
+      errorText = errorData.error?.message || JSON.stringify(errorData);
+    } catch(e) {
       errorText = await response.text();
     }
-    throw new Error(`AI HTTP ${response.status}: ${errorText}`);
+    throw new Error("AI HTTP " + response.status + ": " + errorText);
   }
 
-  const data = await response.json();
-  const content = data?.choices?.[0]?.message?.content;
+  var data = await response.json();
+  var content = data.choices?.[0]?.message?.content;
 
-  if (!content) {
-    throw new Error("AI вернул пустой ответ.");
-  }
+  if (!content) throw new Error("AI вернул пустой ответ.");
 
-  let result;
+  var result;
   try {
     result = JSON.parse(content);
-  } catch {
-    throw new Error("AI вернул невалидный JSON:\n\n" + content);
+  } catch(e) {
+    throw new Error("AI вернул невалидный JSON:
+
+" + content);
   }
 
-  const latinName = String(result?.latin_name || "").trim();
-  const description = String(result?.description || "").trim();
+  var latinName = String(result.latin_name || "").trim();
+  var description = String(result.description || "").trim();
 
   if (!latinName || !description) {
     throw new Error("В ответе AI отсутствует латинское название или описание.");
@@ -64,10 +61,10 @@ export async function requestAI(russianName, provider, apiKey) {
 
   return {
     latin_name: latinName,
-    class: String(result?.class || "").trim(),
-    family: String(result?.family || "").trim(),
-    genus: String(result?.genus || "").trim(),
-    species: String(result?.species || "").trim(),
+    class: String(result.class || "").trim(),
+    family: String(result.family || "").trim(),
+    genus: String(result.genus || "").trim(),
+    species: String(result.species || "").trim(),
     description: description
   };
-}
+};

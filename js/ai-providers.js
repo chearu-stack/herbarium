@@ -1,7 +1,6 @@
-// Конфигурация AI-провайдеров
+// AI: системный промпт и модели
 
-export const SYSTEM_PROMPT = `
-Ты — ботанический справочник и научный редактор для создания гербарных карточек.
+window.SYSTEM_PROMPT = `Ты — ботанический справочник и научный редактор для создания гербарных карточек.
 
 Пользователь сообщает русское название растения.
 
@@ -40,13 +39,8 @@ export const SYSTEM_PROMPT = `
 }
 
 Если русское название неоднозначно, выбери наиболее вероятное соответствие.
-Если есть существенная неоднозначность, кратко укажи её в самом описании.
-`;
+Если есть существенная неоднозначность, кратко укажи её в самом описании.`;
 
-export function getModel(provider) {
-  const models = {
-    deepseek: 'deepseek-chat',
-    yandex: 'yandexgpt-lite'
-  };
-  return models[provider] || models.deepseek;
-}
+window.getModel = function(provider) {
+  return CONFIG.models[provider] || CONFIG.models.deepseek;
+};

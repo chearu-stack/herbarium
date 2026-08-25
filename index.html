@@ -4,24 +4,254 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Шаблонизатор гербариев А4</title>
-<link rel="stylesheet" href="css/style.css">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "Times New Roman", Times, serif; background: #e5e5e5; }
+
+.sidebar {
+  position: fixed; top: 0; left: 0; bottom: 0; width: 260px;
+  background: #f4f4f4; border-right: 1px solid #ccc; overflow-y: auto;
+  padding: 18px 16px; display: flex; flex-direction: column; gap: 18px; z-index: 10;
+}
+.sidebar-title {
+  font-size: 13px; font-weight: bold; text-transform: uppercase;
+  letter-spacing: 0.5px; color: #555; margin-bottom: -6px;
+}
+.controls {
+  display: flex; flex-direction: column; gap: 8px;
+}
+.controls button, .ai-settings button {
+  width: 100%; padding: 10px 14px; font-family: inherit; font-size: 14px;
+  cursor: pointer; border: 1px solid #333; background: #fff; border-radius: 4px; text-align: left;
+}
+.controls button:hover, .ai-settings button:hover { background: #f0f0f0; }
+.border-style-options {
+  display: flex; flex-direction: column; gap: 6px;
+  margin-top: 4px; padding-top: 10px; border-top: 1px solid #ddd;
+}
+.controls label, .ai-settings label {
+  font-size: 13px; cursor: pointer; display: flex; align-items: center;
+}
+.controls input[type="radio"] { margin-right: 6px; cursor: pointer; }
+
+.ai-settings {
+  background: #fff; border: 1px solid #bbb; border-radius: 5px;
+  padding: 12px; display: flex; flex-direction: column; gap: 8px;
+}
+.ai-setting-row { display: flex; flex-direction: column; gap: 3px; }
+.ai-setting-row label { font-size: 12px; font-weight: bold; color: #444; }
+.ai-setting-row input, .ai-setting-row select {
+  font-family: inherit; font-size: 13px; padding: 6px 8px;
+  border: 1px solid #999; border-radius: 3px; width: 100%;
+}
+.ai-status-mini { font-size: 11px; color: #888; text-align: center; }
+
+.ai-panel {
+  display: none; background: #fff; border: 1px solid #777;
+  border-radius: 5px; padding: 12px;
+}
+.ai-panel.visible { display: block; }
+.ai-panel-title { font-size: 15px; font-weight: bold; margin-bottom: 8px; }
+.ai-status { font-size: 13px; color: #555; margin-bottom: 10px; }
+.ai-result { background: #f7f7f7; border: 1px solid #bbb; padding: 10px; margin-bottom: 10px; }
+.ai-result-row { margin-bottom: 10px; }
+.ai-result-row:last-child { margin-bottom: 0; }
+.ai-result-label { font-size: 11px; font-weight: bold; color: #555; margin-bottom: 4px; }
+.ai-result-value { font-size: 14px; white-space: pre-wrap; }
+.ai-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.ai-actions button {
+  padding: 9px 16px; font-family: inherit; font-size: 14px;
+  cursor: pointer; border: 1px solid #333; background: #fff; border-radius: 4px;
+}
+.ai-actions button:hover { background: #eee; }
+.ai-actions .apply-button { font-weight: bold; }
+
+.main-content { margin-left: 260px; padding: 20px; min-height: 100vh; }
+.pages-container { display: flex; flex-direction: column; align-items: center; gap: 30px; }
+.page {
+  width: 210mm; height: 297mm; background: #fff;
+  box-shadow: 0 0 10px rgba(0,0,0,0.3); position: relative;
+  overflow: hidden; page-break-after: always; page-break-inside: avoid;
+}
+
+.content-area {
+  position: absolute; top: 5mm; right: 5mm; bottom: 5mm; left: 20mm;
+  width: 185mm; height: 287mm; display: flex; flex-direction: column;
+}
+.content-area.mode-full { border: 0.5pt solid #000; }
+.content-area.mode-full .header { border-bottom: 0.5pt solid #000; }
+.content-area.mode-full .top-section { border-bottom: 0.5pt solid #000; }
+.content-area.mode-full .left-half { border-right: 0.5pt solid #000; }
+.content-area.mode-left { border-left: 0.5pt solid #000; }
+.content-area.mode-none,
+.content-area.mode-none .header,
+.content-area.mode-none .top-section,
+.content-area.mode-none .left-half { border: none; }
+
+.header {
+  height: 25mm; width: 100%; display: flex; flex-direction: column;
+  justify-content: flex-start; padding-top: 3mm; position: relative;
+}
+.title-rus, .title-lat {
+  width: 100%; border: none; outline: none; font-family: inherit;
+  background: transparent; padding: 0 2mm;
+}
+.title-rus { font-size: 16pt; font-weight: bold; height: 8mm; line-height: 8mm; }
+.title-lat { font-size: 13pt; font-style: italic; height: 7mm; line-height: 7mm; color: #333; }
+
+.ai-page-button {
+  position: absolute; right: 3mm; top: 5mm; z-index: 5;
+  padding: 2mm 4mm; font-family: "Times New Roman", Times, serif; font-size: 9pt;
+  cursor: pointer; background: #fff; border: 1px solid #777; border-radius: 3px;
+}
+.ai-page-button:hover { background: #eee; }
+.page-order-controls {
+  position: absolute; right: 20mm; top: 5mm; z-index: 5;
+  display: flex; flex-direction: column; gap: 1mm;
+}
+.order-button {
+  width: 6mm; height: 4.2mm; padding: 0; line-height: 1; font-size: 8pt;
+  cursor: pointer; background: #fff; border: 1px solid #777; border-radius: 3px;
+}
+.order-button:hover:not(:disabled) { background: #eee; }
+.order-button:disabled { opacity: 0.3; cursor: default; }
+
+.top-section { height: 140mm; width: 100%; display: flex; }
+.left-half, .right-half { height: 100%; width: 92.5mm; position: relative; }
+.left-half { padding-right: 5px; }
+.right-half { padding-left: 5px; }
+
+.image-box {
+  width: 100%; height: 100%; position: relative; overflow: hidden; background: #fafafa;
+}
+.image-box img {
+  position: absolute; top: 50%; left: 50%; max-width: none; max-height: none;
+  display: none; transform-origin: center center; cursor: grab;
+  user-select: none; -webkit-user-drag: none; touch-action: none;
+}
+.image-box.has-image img { display: block; }
+.image-box.has-image .img-placeholder { display: none; }
+.image-box.has-image::after {
+  content: "⟳ Заменить изображение"; position: absolute; bottom: 2mm; right: 2mm;
+  background: rgba(255,255,255,0.9); border: 1px solid #777; border-radius: 3px;
+  font-family: "Times New Roman", Times, serif; font-size: 8pt;
+  padding: 1mm 2.5mm; opacity: 0; transition: opacity 0.15s; pointer-events: none;
+}
+.image-box.has-image:hover::after { opacity: 1; }
+.img-placeholder {
+  text-align: center; color: #888; font-size: 11pt; padding: 10mm;
+  cursor: pointer; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.img-placeholder:hover { color: #333; }
+.img-placeholder button {
+  margin-top: 5mm; padding: 3mm 6mm; font-family: inherit; font-size: 10pt; cursor: pointer;
+}
+.file-input { display: none; }
+
+.image-controls {
+  position: absolute; bottom: 3mm; left: 50%; transform: translateX(-50%);
+  display: none; gap: 2mm; z-index: 10; background: rgba(255,255,255,0.9);
+  padding: 1.5mm 2.5mm; border-radius: 3mm; border: 0.5pt solid #999;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
+.image-box.has-image .image-controls { display: flex; }
+.img-ctrl-btn {
+  width: 7mm; height: 7mm; border: 0.5pt solid #666; background: #fff; border-radius: 50%;
+  font-family: "Times New Roman", Times, serif; font-size: 10pt; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; line-height: 1; padding: 0; color: #333;
+}
+.img-ctrl-btn:hover { background: #f0f0f0; }
+.img-ctrl-hint {
+  position: absolute; top: 2mm; left: 50%; transform: translateX(-50%);
+  font-size: 7.5pt; color: #888; background: rgba(255,255,255,0.85);
+  padding: 0.5mm 1.5mm; border-radius: 1mm; pointer-events: none;
+  opacity: 0; transition: opacity 0.2s; white-space: nowrap;
+}
+.image-box.has-image:hover .img-ctrl-hint { opacity: 1; }
+
+.right-half { display: flex; flex-direction: column; }
+.taxonomy-block { width: 100%; display: flex; flex-direction: column; flex-shrink: 0; }
+.taxonomy-row {
+  min-height: 4.5mm; width: 100%; display: flex; align-items: flex-start; padding: 0.8mm 1mm;
+}
+.taxonomy-label {
+  font-size: 10pt; font-weight: bold; flex-shrink: 0; margin-right: 2mm;
+  line-height: 1.3; padding-top: 0.3mm;
+}
+.taxonomy-input {
+  flex: 1; min-width: 0; font-family: inherit; font-size: 10pt;
+  background: transparent; line-height: 1.3; color: #222; outline: none;
+  white-space: pre-wrap; word-break: break-word;
+}
+.taxonomy-input:empty::before { content: attr(data-placeholder); color: #aaa; }
+.description-block {
+  flex: 1; width: 100%; display: flex; flex-direction: column; padding: 2mm 1mm;
+}
+.description-label { font-size: 10pt; font-weight: bold; flex-shrink: 0; margin-bottom: 1mm; }
+.description-textarea {
+  flex: 1; width: 100%; border: none; outline: none; resize: none;
+  font-family: inherit; font-size: 10pt; line-height: 1.3;
+  background: transparent; overflow: auto;
+}
+.description-textarea::placeholder { color: #aaa; font-size: 10pt; }
+
+.middle-section { height: 100mm; width: 100%; position: relative; }
+.middle-label {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  color: #ddd; font-size: 22pt; pointer-events: none; user-select: none;
+  text-align: center; line-height: 1.4;
+}
+
+.footer-section { height: 22mm; width: 100%; display: flex; align-items: center; padding: 0 2mm; }
+.footer-group {
+  margin-left: 50%; width: 50%; display: flex; flex-direction: column;
+  justify-content: center; gap: 3mm;
+}
+.footer-left, .footer-right { display: flex; align-items: center; width: 100%; }
+.footer-label { font-size: 10pt; font-weight: bold; flex-shrink: 0; margin-right: 2mm; }
+.footer-input {
+  flex: 1; border: none; outline: none; font-family: inherit; font-size: 10.5pt;
+  background: transparent; border-bottom: 0.3pt solid #ccc; line-height: 7mm;
+}
+
+.ai-page-button.state-nokey { background: #fdecec; border-color: #c0392b; color: #8b1a1a; }
+.ai-page-button.state-ready { background: #eaf7ea; border-color: #2e8b3d; color: #1e5c28; }
+.ai-page-button.state-loading {
+  background: #fff6df; border-color: #c99a12; color: #7a5c00;
+  cursor: wait; animation: ai-pulse 1.1s ease-in-out infinite;
+}
+@keyframes ai-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+@media print {
+  body { background: #fff; padding: 0; margin: 0; }
+  .sidebar { display: none !important; }
+  .main-content { margin-left: 0; padding: 0; }
+  .controls, .ai-panel, .ai-settings { display: none !important; }
+  .ai-page-button, .page-order-controls, .image-controls, .img-ctrl-hint { display: none !important; }
+  .page { box-shadow: none; margin: 0; page-break-after: always; }
+  .pages-container { gap: 0; }
+  .middle-label { display: none; }
+  .footer-input { border-bottom-color: #ddd; }
+  .image-box.has-image::after { display: none !important; }
+}
+@page { size: A4; margin: 0; }
+</style>
 </head>
+
 <body>
 
 <div class="sidebar">
-
   <div class="controls">
     <div class="sidebar-title">Управление</div>
     <button id="btnAddPage">+ Добавить страницу</button>
     <button id="btnPrint">🖨 Печать</button>
     <button id="btnClear">Очистить всё</button>
-
     <div class="border-style-options">
       <button id="btnSave">💾 Сохранить проект</button>
       <button id="btnLoadTrigger">📂 Загрузить проект</button>
       <input type="file" id="loadProjectInput" accept=".json" style="display:none">
     </div>
-
     <div class="border-style-options">
       <label><input type="radio" name="borderStyle" value="mode-full" checked> Полная рамка</label>
       <label><input type="radio" name="borderStyle" value="mode-left"> Только слева (дырокол)</label>
@@ -29,7 +259,6 @@
     </div>
   </div>
 
-  <!-- НАСТРОЙКИ AI — только провайдер и ключ -->
   <div class="ai-settings" id="aiSettings">
     <div class="sidebar-title">Настройки AI</div>
     <div class="ai-setting-row">
@@ -47,11 +276,9 @@
     <div class="ai-status-mini" id="aiKeyStatus">Ключ не сохранён</div>
   </div>
 
-  <!-- ОКНО ПРОВЕРКИ AI -->
   <div class="ai-panel" id="aiPanel">
     <div class="ai-panel-title">Проверка данных AI</div>
     <div class="ai-status" id="aiStatus">Здесь появится результат.</div>
-
     <div class="ai-result">
       <div class="ai-result-row">
         <div class="ai-result-label">ЛАТИНСКОЕ НАЗВАНИЕ</div>
@@ -66,19 +293,26 @@
         <div class="ai-result-value" id="aiDescriptionResult"></div>
       </div>
     </div>
-
     <div class="ai-actions">
       <button class="apply-button" id="applyAiButton" disabled>ПРИМЕНИТЬ</button>
       <button id="cancelAiButton">Отмена</button>
     </div>
   </div>
-
 </div>
 
 <div class="main-content">
   <div class="pages-container" id="pagesContainer"></div>
 </div>
 
-<script type="module" src="js/app.js"></script>
+<!-- ОБЫЧНЫЕ СКРИПТЫ (НЕ МОДУЛИ) — в правильном порядке -->
+<script src="js/config.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/ai-providers.js"></script>
+<script src="js/ai-client.js"></script>
+<script src="js/image-editor.js"></script>
+<script src="js/pages.js"></script>
+<script src="js/app.js"></script>
+
 </body>
 </html>
