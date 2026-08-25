@@ -3,15 +3,12 @@
 import { CONFIG } from './config.js';
 import { SYSTEM_PROMPT, getModel } from './ai-providers.js';
 
-export async function requestAI(russianName, provider, apiKey, proxyUrl) {
-  if (!proxyUrl) {
-    throw new Error('Не указан URL прокси. Введи его в настройках AI.');
-  }
+export async function requestAI(russianName, provider, apiKey) {
   if (!apiKey) {
-    throw new Error('Не указан API-ключ. Введи его в настройках AI.');
+    throw new Error('Не указан API-ключ. Введи его в настройках AI (боковая панель).');
   }
 
-  const url = `${proxyUrl.replace(/\/$/, '')}/api/ai/${provider}`;
+  const url = `${CONFIG.proxyUrl}/api/ai/${provider}`;
   const model = getModel(provider);
 
   const response = await fetch(url, {

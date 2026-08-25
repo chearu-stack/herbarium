@@ -1,22 +1,14 @@
-// Конфигурация приложения
+// Конфигурация — прокси захардкожен, пользователь вводит только ключ
 export const CONFIG = {
-  // URL твоего бэкенд-прокси (Render / Railway / localhost)
-  proxyUrl: localStorage.getItem('herbarium_proxy_url') || '',
+  // Твой прокси на Render — меняй здесь если деплоишь новый
+  proxyUrl: "https://herbarium-51iz.onrender.com",
 
-  // Настройки по умолчанию
-  defaultBorderStyle: 'mode-full',
-
-  // AI
-  aiProvider: localStorage.getItem('herbarium_ai_provider') || 'deepseek',
-  aiApiKey: localStorage.getItem('herbarium_ai_key') || '',
+  // AI-провайдер по умолчанию
+  defaultProvider: "deepseek",
 
   // Модели
   models: {
-    deepseek: 'deepseek-chat',
-    yandex: 'yandexgpt-lite'
+    deepseek: "deepseek-chat",
+    yandex: "yandexgpt-lite"
   }
 };
-
-export function updateConfig(updates) {
-  Object.assign(CONFIG, updates);
-}

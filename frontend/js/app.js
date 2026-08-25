@@ -1,12 +1,12 @@
 // Главный модуль — связывает всё воедино
 
-import { CONFIG, updateConfig } from './config.js';
+import { CONFIG } from './config.js';
 import { saveProject, loadProject } from './storage.js';
 import { requestAI } from './ai-client.js';
 import { setAIButtonState, hasValidApiKey } from './utils.js';
 import { 
   createPage, movePage, updatePageOrderControls, 
-  getAllPagesData, clearAllPages, restorePages, loadImageFile 
+  getAllPagesData, clearAllPages, restorePages 
 } from './pages.js';
 
 // ===== СОСТОЯНИЕ =====
@@ -18,11 +18,9 @@ function init() {
   // Загрузить настройки AI из localStorage
   const savedProvider = localStorage.getItem('herbarium_ai_provider');
   const savedKey = localStorage.getItem('herbarium_ai_key');
-  const savedProxy = localStorage.getItem('herbarium_proxy_url');
 
   if (savedProvider) document.getElementById('aiProvider').value = savedProvider;
   if (savedKey) document.getElementById('aiApiKey').value = savedKey;
-  if (savedProxy) document.getElementById('aiProxyUrl').value = savedProxy;
 
   updateKeyStatus();
 
@@ -66,7 +64,7 @@ function bindGlobalEvents() {
     movePage(id, dir);
   });
 
-  // AI запросы (делегирование через CustomEvent)
+  // AI запросы
   document.getElementById('pagesContainer').addEventListener('request-ai', (e) => {
     handleAIRequest(e.detail.id);
   });
@@ -132,13 +130,10 @@ async function onLoad(e) {
 function saveKeys() {
   const provider = document.getElementById('aiProvider').value;
   const key = document.getElementById('aiApiKey').value.trim();
-  const proxy = document.getElementById('aiProxyUrl').value.trim();
 
   localStorage.setItem('herbarium_ai_provider', provider);
   localStorage.setItem('herbarium_ai_key', key);
-  localStorage.setItem('herbarium_proxy_url', proxy);
 
-  updateConfig({ aiProvider: provider, aiApiKey: key, proxyUrl: proxy });
   updateKeyStatus();
 
   // Обновить кнопки AI на всех страницах
@@ -146,16 +141,16 @@ function saveKeys() {
     setAIButtonState(btn, hasValidApiKey() ? 'ready' : 'nokey');
   });
 
-  alert('Настройки AI сохранены в этом браузере.');
+  alert('Ключ сохранён в этом браузере.');
 }
 
 function updateKeyStatus() {
   const el = document.getElementById('aiKeyStatus');
   if (hasValidApiKey()) {
-    el.textContent = '✓ Ключи сохранены';
+    el.textContent = '✓ Ключ сохранён';
     el.style.color = '#2e8b3d';
   } else {
-    el.textContent = 'Ключи не сохранены';
+    el.textContent = 'Ключ не сохранён';
     el.style.color = '#888';
   }
 }
@@ -171,14 +166,9 @@ async function handleAIRequest(id) {
     return;
   }
 
-  const provider = localStorage.getItem('herbarium_ai_provider') || 'deepseek';
+  const provider = localStorage.getItem('herbarium_ai_provider') || CONFIG.defaultProvider;
   const apiKey = localStorage.getItem('herbarium_ai_key') || '';
-  const proxyUrl = localStorage.getItem('herbarium_proxy_url') || '';
 
-  if (!proxyUrl) {
-    alert('Не указан URL прокси.\n\nВведи его в настройках AI (боковая панель → "URL прокси").\n\nЕсли запускаешь локально: http://localhost:3000');
-    return;
-  }
   if (!apiKey) {
     alert('Не указан API-ключ.\n\nВведи его в настройках AI (боковая панель).');
     return;
@@ -193,7 +183,7 @@ async function handleAIRequest(id) {
   document.getElementById('aiLatinResult').textContent = '';
   document.getElementById('aiTaxonomyResult').textContent = '';
   document.getElementById('aiDescriptionResult').textContent = '';
-  document.getElementById('aiStatus').textContent = `AI (${provider}) определяет растение: «${russianName}»...`;
+  document.getElementById('aiStatus').textContent = `AI (${provider}) определяет: «${russianName}»...`;
   document.getElementById('applyAiButton').disabled = true;
 
   const pageButton = document.getElementById(`ai-button-${id}`);
@@ -203,7 +193,7 @@ async function handleAIRequest(id) {
   }
 
   try {
-    const result = await requestAI(russianName, provider, apiKey, proxyUrl);
+    const result = await requestAI(russianName, provider, apiKey);
 
     pendingAIResult = result;
 
