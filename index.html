@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Шаблонизатор гербариев А4</title>
 <style>
+/* ===== BASE (существующее) ===== */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: "Times New Roman", Times, serif; background: #e5e5e5; }
-
 .sidebar {
   position: fixed; top: 0; left: 0; bottom: 0; width: 260px;
   background: #f4f4f4; border-right: 1px solid #ccc; overflow-y: auto;
@@ -17,14 +17,14 @@ body { font-family: "Times New Roman", Times, serif; background: #e5e5e5; }
   font-size: 13px; font-weight: bold; text-transform: uppercase;
   letter-spacing: 0.5px; color: #555; margin-bottom: -6px;
 }
-.controls {
+.controls, .document-controls {
   display: flex; flex-direction: column; gap: 8px;
 }
-.controls button, .ai-settings button {
+.controls button, .ai-settings button, .document-controls button {
   width: 100%; padding: 10px 14px; font-family: inherit; font-size: 14px;
   cursor: pointer; border: 1px solid #333; background: #fff; border-radius: 4px; text-align: left;
 }
-.controls button:hover, .ai-settings button:hover { background: #f0f0f0; }
+.controls button:hover, .ai-settings button:hover, .document-controls button:hover { background: #f0f0f0; }
 .border-style-options {
   display: flex; flex-direction: column; gap: 6px;
   margin-top: 4px; padding-top: 10px; border-top: 1px solid #ddd;
@@ -34,18 +34,20 @@ body { font-family: "Times New Roman", Times, serif; background: #e5e5e5; }
 }
 .controls input[type="radio"] { margin-right: 6px; cursor: pointer; }
 
+/* ===== AI SETTINGS ===== */
 .ai-settings {
   background: #fff; border: 1px solid #bbb; border-radius: 5px;
   padding: 12px; display: flex; flex-direction: column; gap: 8px;
 }
 .ai-setting-row { display: flex; flex-direction: column; gap: 3px; }
 .ai-setting-row label { font-size: 12px; font-weight: bold; color: #444; }
-.ai-setting-row input, .ai-setting-row select {
+.ai-setting-row input, .ai-setting-row select, .ai-setting-row textarea {
   font-family: inherit; font-size: 13px; padding: 6px 8px;
   border: 1px solid #999; border-radius: 3px; width: 100%;
 }
 .ai-status-mini { font-size: 11px; color: #888; text-align: center; }
 
+/* ===== AI PANEL (herbarium) ===== */
 .ai-panel {
   display: none; background: #fff; border: 1px solid #777;
   border-radius: 5px; padding: 12px;
@@ -66,6 +68,14 @@ body { font-family: "Times New Roman", Times, serif; background: #e5e5e5; }
 .ai-actions button:hover { background: #eee; }
 .ai-actions .apply-button { font-weight: bold; }
 
+/* ===== COVER / CONCLUSION PANELS in sidebar ===== */
+.cover-panel, .conclusion-panel {
+  display: none; background: #fff; border: 1px solid #bbb;
+  border-radius: 5px; padding: 12px; flex-direction: column; gap: 8px;
+}
+.cover-panel.visible, .conclusion-panel.visible { display: flex; }
+
+/* ===== PAGES ===== */
 .main-content { margin-left: 260px; padding: 20px; min-height: 100vh; }
 .pages-container { display: flex; flex-direction: column; align-items: center; gap: 30px; }
 .page {
@@ -74,6 +84,15 @@ body { font-family: "Times New Roman", Times, serif; background: #e5e5e5; }
   overflow: hidden; page-break-after: always; page-break-inside: avoid;
 }
 
+/* Page type badge (screen only) */
+.page-type-badge {
+  position: absolute; top: 2mm; left: 2mm;
+  background: rgba(0,0,0,0.06); color: #777;
+  font-size: 8pt; padding: 1mm 2mm; border-radius: 2mm;
+  pointer-events: none; user-select: none; z-index: 20;
+}
+
+/* ===== HERBARIUM (существующее) ===== */
 .content-area {
   position: absolute; top: 5mm; right: 5mm; bottom: 5mm; left: 20mm;
   width: 185mm; height: 287mm; display: flex; flex-direction: column;
@@ -87,7 +106,6 @@ body { font-family: "Times New Roman", Times, serif; background: #e5e5e5; }
 .content-area.mode-none .header,
 .content-area.mode-none .top-section,
 .content-area.mode-none .left-half { border: none; }
-
 .header {
   height: 25mm; width: 100%; display: flex; flex-direction: column;
   justify-content: flex-start; padding-top: 3mm; position: relative;
@@ -98,7 +116,6 @@ body { font-family: "Times New Roman", Times, serif; background: #e5e5e5; }
 }
 .title-rus { font-size: 16pt; font-weight: bold; height: 8mm; line-height: 8mm; }
 .title-lat { font-size: 13pt; font-style: italic; height: 7mm; line-height: 7mm; color: #333; }
-
 .ai-page-button {
   position: absolute; right: 3mm; top: 5mm; z-index: 5;
   padding: 2mm 4mm; font-family: "Times New Roman", Times, serif; font-size: 9pt;
@@ -115,12 +132,10 @@ body { font-family: "Times New Roman", Times, serif; background: #e5e5e5; }
 }
 .order-button:hover:not(:disabled) { background: #eee; }
 .order-button:disabled { opacity: 0.3; cursor: default; }
-
 .top-section { height: 140mm; width: 100%; display: flex; }
 .left-half, .right-half { height: 100%; width: 92.5mm; position: relative; }
 .left-half { padding-right: 5px; }
 .right-half { padding-left: 5px; }
-
 .image-box {
   width: 100%; height: 100%; position: relative; overflow: hidden; background: #fafafa;
 }
@@ -148,7 +163,6 @@ body { font-family: "Times New Roman", Times, serif; background: #e5e5e5; }
   margin-top: 5mm; padding: 3mm 6mm; font-family: inherit; font-size: 10pt; cursor: pointer;
 }
 .file-input { display: none; }
-
 .image-controls {
   position: absolute; bottom: 3mm; left: 50%; transform: translateX(-50%);
   display: none; gap: 2mm; z-index: 10; background: rgba(255,255,255,0.9);
@@ -169,7 +183,6 @@ body { font-family: "Times New Roman", Times, serif; background: #e5e5e5; }
   opacity: 0; transition: opacity 0.2s; white-space: nowrap;
 }
 .image-box.has-image:hover .img-ctrl-hint { opacity: 1; }
-
 .right-half { display: flex; flex-direction: column; }
 .taxonomy-block { width: 100%; display: flex; flex-direction: column; flex-shrink: 0; }
 .taxonomy-row {
@@ -195,14 +208,12 @@ body { font-family: "Times New Roman", Times, serif; background: #e5e5e5; }
   background: transparent; overflow: auto;
 }
 .description-textarea::placeholder { color: #aaa; font-size: 10pt; }
-
 .middle-section { height: 100mm; width: 100%; position: relative; }
 .middle-label {
   position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
   color: #ddd; font-size: 22pt; pointer-events: none; user-select: none;
   text-align: center; line-height: 1.4;
 }
-
 .footer-section { height: 22mm; width: 100%; display: flex; align-items: center; padding: 0 2mm; }
 .footer-group {
   margin-left: 50%; width: 50%; display: flex; flex-direction: column;
@@ -214,7 +225,6 @@ body { font-family: "Times New Roman", Times, serif; background: #e5e5e5; }
   flex: 1; border: none; outline: none; font-family: inherit; font-size: 10.5pt;
   background: transparent; border-bottom: 0.3pt solid #ccc; line-height: 7mm;
 }
-
 .ai-page-button.state-nokey { background: #fdecec; border-color: #c0392b; color: #8b1a1a; }
 .ai-page-button.state-ready { background: #eaf7ea; border-color: #2e8b3d; color: #1e5c28; }
 .ai-page-button.state-loading {
@@ -223,12 +233,139 @@ body { font-family: "Times New Roman", Times, serif; background: #e5e5e5; }
 }
 @keyframes ai-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
+/* ===== CONTENTEDITABLE PLACEHOLDERS ===== */
+[contenteditable="true"]:empty::before {
+  content: attr(data-placeholder);
+  color: #aaa;
+  pointer-events: none;
+}
+
+/* ===== COVER PAGE ===== */
+.cover-content {
+  width: 100%; height: 100%; display: flex; flex-direction: column;
+  padding: 15mm 20mm 20mm 20mm;
+}
+.cover-top {
+  text-align: center; margin-bottom: 15mm;
+}
+.cover-org {
+  font-size: 14pt; font-weight: bold; margin-bottom: 3mm;
+}
+.cover-city {
+  font-size: 12pt; color: #333;
+}
+.cover-center {
+  flex: 1; display: flex; flex-direction: column;
+  justify-content: center; align-items: center; text-align: center;
+}
+.cover-title-label {
+  font-size: 12pt; margin-bottom: 8mm;
+}
+.cover-title {
+  font-size: 22pt; font-weight: bold; margin-bottom: 6mm;
+}
+.cover-subject {
+  font-size: 14pt; font-style: italic;
+}
+.cover-bottom {
+  display: flex; flex-direction: column; gap: 4mm;
+  padding: 0 15mm;
+}
+.cover-meta-row {
+  display: flex; align-items: baseline; font-size: 13pt;
+}
+.cover-meta-row .cover-label {
+  flex-shrink: 0; font-weight: bold; margin-right: 2mm;
+}
+.cover-meta-row .cover-value {
+  flex: 1; border-bottom: 0.5pt solid #000; text-align: center;
+  min-height: 6mm; line-height: 6mm;
+}
+.cover-year {
+  text-align: center; font-size: 14pt; margin-top: 12mm;
+}
+
+/* ===== TOC PAGE ===== */
+.toc-content {
+  width: 100%; height: 100%; padding: 15mm 20mm;
+}
+.toc-title {
+  font-size: 18pt; font-weight: bold; text-align: center;
+  margin-bottom: 15mm; text-transform: uppercase; letter-spacing: 1px;
+}
+.toc-class {
+  font-size: 14pt; font-weight: bold; margin-top: 8mm; margin-bottom: 3mm;
+}
+.toc-item {
+  display: flex; align-items: baseline; font-size: 12pt;
+  padding-left: 5mm; margin-bottom: 2mm;
+}
+.toc-family {
+  font-size: 11pt;
+  font-style: italic;
+  color: #555;
+  padding-left: 5mm;
+  margin-top: 2mm;
+  margin-bottom: 1mm;
+}
+.toc-item {
+  display: flex;
+  align-items: baseline;
+  font-size: 12pt;
+  padding-left: 10mm;
+  margin-bottom: 1.5mm;
+}
+.toc-item-name { flex-shrink: 0; }
+.toc-item-dots {
+  flex: 1; border-bottom: 1px dotted #333; margin: 0 3mm 2mm 3mm; min-width: 10mm;
+}
+.toc-item-page { flex-shrink: 0; font-weight: bold; }
+.toc-conclusion {
+  margin-top: 8mm;
+  font-weight: bold;
+}
+
+/* ===== DIVIDER PAGE ===== */
+.divider-content {
+  width: 100%; height: 100%; display: flex; flex-direction: column;
+  justify-content: center; align-items: center;
+  padding: 20mm; text-align: center;
+}
+.divider-class-ru {
+  font-size: 30pt; font-weight: bold; text-transform: uppercase;
+  margin-bottom: 5mm; letter-spacing: 1px;
+}
+.divider-class-lat {
+  font-size: 18pt; font-style: italic; color: #444;
+  margin-bottom: 20mm;
+}
+.divider-history {
+  font-size: 12pt; line-height: 1.6; max-width: 145mm;
+  text-align: justify; color: #222;
+}
+
+/* ===== CONCLUSION PAGE ===== */
+.conclusion-content {
+  width: 100%; height: 100%; padding: 15mm 20mm;
+}
+.conclusion-title {
+  font-size: 18pt; font-weight: bold; text-align: center;
+  margin-bottom: 12mm; text-transform: uppercase; letter-spacing: 1px;
+}
+.conclusion-text {
+  font-size: 12pt; line-height: 1.6; text-align: justify;
+  white-space: pre-wrap;
+}
+
+/* ===== PRINT ===== */
 @media print {
   body { background: #fff; padding: 0; margin: 0; }
   .sidebar { display: none !important; }
   .main-content { margin-left: 0; padding: 0; }
-  .controls, .ai-panel, .ai-settings { display: none !important; }
-  .ai-page-button, .page-order-controls, .image-controls, .img-ctrl-hint { display: none !important; }
+  .controls, .ai-panel, .ai-settings, .document-controls,
+  .cover-panel, .conclusion-panel { display: none !important; }
+  .ai-page-button, .page-order-controls, .image-controls, .img-ctrl-hint,
+  .page-type-badge { display: none !important; }
   .page { box-shadow: none; margin: 0; page-break-after: always; }
   .pages-container { gap: 0; }
   .middle-label { display: none; }
@@ -238,13 +375,12 @@ body { font-family: "Times New Roman", Times, serif; background: #e5e5e5; }
 @page { size: A4; margin: 0; }
 </style>
 </head>
-
 <body>
-
 <div class="sidebar">
+  <!-- Управление -->
   <div class="controls">
     <div class="sidebar-title">Управление</div>
-    <button id="btnAddPage">+ Добавить страницу</button>
+    <button id="btnAddPage">+ Добавить гербарный лист</button>
     <button id="btnPrint">🖨 Печать</button>
     <button id="btnClear">Очистить всё</button>
     <div class="border-style-options">
@@ -259,6 +395,17 @@ body { font-family: "Times New Roman", Times, serif; background: #e5e5e5; }
     </div>
   </div>
 
+  <!-- Документ -->
+  <div class="document-controls">
+    <div class="sidebar-title">Документ</div>
+    <button id="btnAddCover">+ Титульный лист</button>
+    <button id="btnBuildDocument">📋 Собрать документ</button>
+    <button id="btnRebuildToc">📝 Обновить содержание</button>
+    <button id="btnGenerateDividers">🤖 AI → Разделители</button>
+    <button id="btnToggleConclusion">🔚 Заключение</button>
+  </div>
+
+  <!-- Настройки AI -->
   <div class="ai-settings" id="aiSettings">
     <div class="sidebar-title">Настройки AI</div>
     <div class="ai-setting-row">
@@ -276,27 +423,28 @@ body { font-family: "Times New Roman", Times, serif; background: #e5e5e5; }
     <div class="ai-status-mini" id="aiKeyStatus">Ключ не сохранён</div>
   </div>
 
+  <!-- AI панель (herbarium) -->
   <div class="ai-panel" id="aiPanel">
     <div class="ai-panel-title">Проверка данных AI</div>
     <div class="ai-status" id="aiStatus">Здесь появится результат.</div>
     <div class="ai-result">
-      <div class="ai-result-row">
-        <div class="ai-result-label">ЛАТИНСКОЕ НАЗВАНИЕ</div>
-        <div class="ai-result-value" id="aiLatinResult"></div>
-      </div>
-      <div class="ai-result-row">
-        <div class="ai-result-label">ТАКСОНОМИЯ</div>
-        <div class="ai-result-value" id="aiTaxonomyResult"></div>
-      </div>
-      <div class="ai-result-row">
-        <div class="ai-result-label">ОПИСАНИЕ</div>
-        <div class="ai-result-value" id="aiDescriptionResult"></div>
-      </div>
+      <div class="ai-result-row"><div class="ai-result-label">ЛАТИНСКОЕ НАЗВАНИЕ</div><div class="ai-result-value" id="aiLatinResult"></div></div>
+      <div class="ai-result-row"><div class="ai-result-label">ТАКСОНОМИЯ</div><div class="ai-result-value" id="aiTaxonomyResult"></div></div>
+      <div class="ai-result-row"><div class="ai-result-label">ОПИСАНИЕ</div><div class="ai-result-value" id="aiDescriptionResult"></div></div>
     </div>
     <div class="ai-actions">
       <button class="apply-button" id="applyAiButton" disabled>ПРИМЕНИТЬ</button>
       <button id="cancelAiButton">Отмена</button>
     </div>
+  </div>
+
+  <!-- Заключение (панель) -->
+  <div class="conclusion-panel" id="conclusionPanel">
+    <div class="sidebar-title">Заключение</div>
+    <div class="ai-status" id="conclusionStatus">Нажмите «Сгенерировать», чтобы AI составил заключение по фактическому составу гербария.</div>
+    <textarea id="conclusionText" style="width:100%;min-height:140px;font-family:inherit;font-size:13px;padding:6px;border:1px solid #999;border-radius:3px;margin-top:8px;resize:vertical;" placeholder="Текст заключения..."></textarea>
+    <button id="btnGenerateConclusion" style="margin-top:6px">✨ Сгенерировать (AI)</button>
+    <button id="btnApplyConclusion" style="margin-top:6px" disabled>💾 Применить к документу</button>
   </div>
 </div>
 
@@ -304,15 +452,80 @@ body { font-family: "Times New Roman", Times, serif; background: #e5e5e5; }
   <div class="pages-container" id="pagesContainer"></div>
 </div>
 
-<!-- ОБЫЧНЫЕ СКРИПТЫ (НЕ МОДУЛИ) — в правильном порядке -->
+<!-- Существующие модули -->
+
+<!-- ===== PAGE TEMPLATES ===== -->
+<template id="tpl-cover">
+  <div class="page" data-type="cover">
+    <div class="page-type-badge">титул</div>
+    <div class="cover-content">
+      <div class="cover-top">
+        <div class="cover-org" contenteditable="true" data-placeholder="МБОУ СОШ №1"></div>
+        <div class="cover-city" contenteditable="true" data-placeholder="г. Москва"></div>
+      </div>
+      <div class="cover-center">
+        <div class="cover-title-label">Проектная работа</div>
+        <div class="cover-title" contenteditable="true" data-placeholder="Гербарий растений"></div>
+        <div class="cover-subject" contenteditable="true" data-placeholder="Биология"></div>
+      </div>
+      <div class="cover-bottom">
+        <div class="cover-meta-row"><span class="cover-label">Выполнил:</span><div class="cover-value" contenteditable="true" data-placeholder="ФИО обучающегося"></div></div>
+        <div class="cover-meta-row"><span class="cover-label">Класс:</span><div class="cover-value" contenteditable="true" data-placeholder="7А"></div></div>
+        <div class="cover-meta-row"><span class="cover-label">Руководитель:</span><div class="cover-value" contenteditable="true" data-placeholder="ФИО руководителя"></div></div>
+      </div>
+      <div class="cover-year" contenteditable="true" data-placeholder="2026"></div>
+    </div>
+  </div>
+</template>
+
+<template id="tpl-toc">
+  <div class="page" data-type="toc">
+    <div class="page-type-badge">содержание</div>
+    <div class="toc-content">
+      <div class="toc-title">Содержание</div>
+      <div class="toc-body"></div>
+    </div>
+  </div>
+</template>
+
+<template id="tpl-divider">
+  <div class="page" data-type="divider">
+    <div class="page-type-badge">разделитель</div>
+    <div class="divider-content">
+      <div class="divider-class-ru" contenteditable="true" data-placeholder="ДВУДОЛЬНЫЕ"></div>
+      <div class="divider-class-lat" contenteditable="true" data-placeholder="Magnoliopsida"></div>
+      <div class="divider-history" contenteditable="true" data-placeholder="Краткая историческая справка о классе..."></div>
+    </div>
+  </div>
+</template>
+
+<template id="tpl-conclusion">
+  <div class="page" data-type="conclusion">
+    <div class="page-type-badge">заключение</div>
+    <div class="conclusion-content">
+      <div class="conclusion-title">Заключение</div>
+      <div class="conclusion-text" contenteditable="true" data-placeholder="Текст заключения..."></div>
+    </div>
+  </div>
+</template>
+
 <script src="js/config.js"></script>
 <script src="js/utils.js"></script>
 <script src="js/storage.js"></script>
 <script src="js/ai-providers.js"></script>
 <script src="js/ai-client.js"></script>
 <script src="js/image-editor.js"></script>
-<script src="js/pages.js"></script>
-<script src="js/app.js"></script>
 
+<!-- Новые модули документа -->
+<script src="js/document-model.js"></script>
+<script src="js/cover.js"></script>
+<script src="js/toc.js"></script>
+<script src="js/divider.js"></script>
+<script src="js/conclusion.js"></script>
+
+<!-- Существующие + сборщик -->
+<script src="js/pages.js"></script>
+<script src="js/document-builder.js"></script>
+<script src="js/app.js"></script>
 </body>
 </html>
