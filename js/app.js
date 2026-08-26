@@ -10,7 +10,6 @@ function init() {
   if (savedKey) document.getElementById('aiApiKey').value = savedKey;
   updateKeyStatus();
 
-  initConclusionSidebar();
   addPage();
   bindGlobalEvents();
 }
@@ -37,6 +36,7 @@ function bindGlobalEvents() {
 
   // === Документ ===
   document.getElementById('btnAddCover').addEventListener('click', addCover);
+  document.getElementById('btnAddConclusion').addEventListener('click', addConclusion);
   document.getElementById('btnBuildDocument').addEventListener('click', onBuildDocument);
   document.getElementById('btnRebuildToc').addEventListener('click', onRebuildToc);
   document.getElementById('btnGenerateDividers').addEventListener('click', onGenerateDividers);
@@ -324,70 +324,17 @@ function onRebuildToc() {
     alert('Модуль оглавления ещё не готов.');
   }
 }
-
-// ===== CONCLUSION SIDEBAR =====
-function initConclusionSidebar() {
-  var btnToggle = document.getElementById('btnToggleConclusion');
-  var panel = document.getElementById('conclusionPanel');
-  if (btnToggle && panel) {
-    btnToggle.addEventListener('click', function() {
-      panel.classList.toggle('visible');
-    });
-  }
-
-  var btnGen = document.getElementById('btnGenerateConclusion');
-  var btnApply = document.getElementById('btnApplyConclusion');
-  var textarea = document.getElementById('conclusionText');
-  var status = document.getElementById('conclusionStatus');
-
-  if (btnGen) {
-    btnGen.addEventListener('click', async function() {
-      var provider = localStorage.getItem('herbarium_ai_provider') || CONFIG.defaultProvider;
-      var apiKey = localStorage.getItem('herbarium_ai_key') || '';
-      if (!apiKey) { alert('Сначала сохрани API-ключ в настройках AI.'); return; }
-
-      status.textContent = 'AI составляет заключение...';
-      btnGen.disabled = true;
-
-      try {
-        var context = buildConclusionContext ? buildConclusionContext() : {};
-        var result = await requestConclusionAI(context, provider, apiKey);
-        textarea.value = result.text || '';
-        status.textContent = 'Готово. Проверь текст и нажми «Применить к документу».';
-        btnApply.disabled = false;
-      } catch (err) {
-        console.error('Conclusion AI error:', err);
-        status.textContent = 'Ошибка при генерации заключения.';
-        alert('Не удалось сгенерировать заключение.\n\n' + err.message);
-      } finally {
-        btnGen.disabled = false;
-      }
-    });
-  }
-
-  if (btnApply) {
-    btnApply.addEventListener('click', function() {
-      var text = textarea.value.trim();
-      if (!text) { alert('Текст заключения пуст.'); return; }
-
-      var existing = document.querySelector('#pagesContainer .page[data-type="conclusion"]');
-      if (existing) {
-        var textEl = existing.querySelector('.conclusion-text');
-        if (textEl) textEl.textContent = text;
-      } else {
-        var page = createConclusionPage ? createConclusionPage(text) : null;
-        if (page) document.getElementById('pagesContainer').appendChild(page);
-      }
-      status.textContent = 'Заключение применено к документу.';
-      btnApply.disabled = true;
-    });
-  }
-}
-
 function onGenerateDividers() {
   if (!hasValidApiKey()) { alert('Сначала сохрани API-ключ в настройках AI.'); return; }
   if (!confirm('Сгенерировать историю для всех разделителей через AI?\n\nЭто отправит ' + document.querySelectorAll('#pagesContainer .page[data-type="divider"]').length + ' запрос(ов).')) return;
   generateAllDividers();
+}
+
+function addConclusion() {
+  var container = document.getElementById('pagesContainer');
+  var page = createConclusionPage();
+  if (!page) return;
+  container.appendChild(page);
 }
 
 init();

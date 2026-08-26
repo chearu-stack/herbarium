@@ -1,4 +1,4 @@
-// conclusion.js — Заключение
+// conclusion.js — Заключение (А4-страница)
 
 window.createConclusionPage = function(text) {
   var tpl = document.getElementById('tpl-conclusion');
@@ -9,6 +9,8 @@ window.createConclusionPage = function(text) {
 
   var textEl = page.querySelector('.conclusion-text');
   if (textEl) textEl.textContent = text || '';
+
+  attachConclusionAI(page);
   return page;
 };
 
@@ -19,6 +21,43 @@ window.readConclusionPage = function(page) {
     text: (page.querySelector('.conclusion-text') || {}).textContent || ''
   };
 };
+
+function attachConclusionAI(page) {
+  var btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'ai-page-button';
+  btn.textContent = 'AI →';
+  btn.title = 'Сгенерировать заключение через AI';
+
+  btn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    handleConclusionAI(page, btn);
+  });
+
+  page.appendChild(btn);
+}
+
+async function handleConclusionAI(page, btn) {
+  var provider = localStorage.getItem('herbarium_ai_provider') || CONFIG.defaultProvider;
+  var apiKey = localStorage.getItem('herbarium_ai_key') || '';
+  if (!apiKey) { alert('Не указан API-ключ. Сохрани ключ в настройках AI.'); return; }
+
+  setAIButtonState(btn, 'loading');
+  btn.disabled = true;
+
+  try {
+    var context = buildConclusionContext();
+    var result = await requestConclusionAI(context, provider, apiKey);
+    var textEl = page.querySelector('.conclusion-text');
+    if (textEl) textEl.textContent = result.text || '';
+  } catch (err) {
+    console.error('Conclusion AI error:', err);
+    alert('Не удалось сгенерировать заключение.\n' + err.message);
+  } finally {
+    setAIButtonState(btn, hasValidApiKey() ? 'ready' : 'nokey');
+    btn.disabled = false;
+  }
+}
 
 window.buildConclusionContext = function() {
   var container = document.getElementById('pagesContainer');
