@@ -94,68 +94,366 @@ function clearAll() {
 
 // ===== SAVE =====
 function onSave() {
-  var container = document.getElementById('pagesContainer');
-  var pages = [];
+  try {
+    console.log('[onSave] Сборка всех страниц проекта...');
 
-  container.querySelectorAll('.page').forEach(function(page) {
-    var type = page.dataset.type || 'herbarium';
+    var pageElements = document.querySelectorAll('#pagesContainer .page');
+    var pages = [];
 
-    if (type === 'cover') {
-      var coverData = readCoverPage(page);
-      if (coverData) pages.push(coverData);
-    }
-    else if (type === 'toc') {
-      pages.push({ type: 'toc', auto: true });
-    }
-    else if (type === 'divider') {
-      pages.push({
-        type: 'divider',
-        classRu: (page.querySelector('.divider-class-ru') || {}).textContent || '',
-        classLat: (page.querySelector('.divider-class-lat') || {}).textContent || '',
-        history: (page.querySelector('.divider-history') || {}).textContent || ''
-      });
-    }
-    else if (type === 'conclusion') {
-      pages.push({
-        type: 'conclusion',
-        text: (page.querySelector('.conclusion-text') || {}).textContent || ''
-      });
-    }
-    else {
-      // herbarium — через существующую функцию
-      var area = page.querySelector('.content-area');
-      if (!area) return;
-      var id = area.id.replace('area-', '');
-      pages.push({
-        type: 'herbarium',
-        borderMode: ['mode-full','mode-left','mode-none'].find(function(m){ return area.classList.contains(m); }) || 'mode-full',
-        titleRus: (document.getElementById('title-rus-' + id) || {}).value || '',
-        titleLat: (document.getElementById('title-lat-' + id) || {}).value || '',
-        taxClass: (document.getElementById('tax-class-' + id) || {}).textContent || '',
-        taxFamily: (document.getElementById('tax-family-' + id) || {}).textContent || '',
-        taxGenus: (document.getElementById('tax-genus-' + id) || {}).textContent || '',
-        taxSpecies: (document.getElementById('tax-species-' + id) || {}).textContent || '',
-        description: (document.getElementById('description-' + id) || {}).value || '',
-        collectionPlace: (document.getElementById('collection-place-' + id) || {}).value || '',
-        collectionDate: (document.getElementById('collection-date-' + id) || {}).value || '',
-        image: (function() {
-          var img = document.getElementById('img-' + id);
-          var box = document.getElementById('imgBox-' + id);
-          return (box && box.classList.contains('has-image') && img) ? img.src : null;
-        })(),
-        transform: (function() {
-          var t = imageTransforms[id];
-          return t ? { scale: t.scale, x: t.x, y: t.y } : null;
-        })()
-      });
-    }
-  });
+    pageElements.forEach(function(page, index) {
 
-  DocumentModel.reset();
-  DocumentModel.setDocument({}); // пустой, т.к. cover хранится как страница
-  pages.forEach(function(p) { DocumentModel.addPage(p); });
+      // ---------------------------------------------------------
+      // 1. Определяем тип страницы
+      // ---------------------------------------------------------
 
-  saveProject(DocumentModel.toJSON());
+      var type =
+        page.dataset.pageType ||
+        page.dataset.type ||
+        page.getAttribute('data-page-type') ||
+        page.getAttribute('data-type');
+
+      // На случай, если тип задан классом
+      if (!type) {
+        if (page.classList.contains('cover-page')) {
+          type = 'cover';
+        } else if (page.classList.contains('toc-page')) {
+          type = 'toc';
+        } else if (page.classList.contains('divider-page')) {
+          type = 'divider';
+        } else if (page.classList.contains('conclusion-page')) {
+          type = 'conclusion';
+        }
+      }
+
+      // Старые страницы, которые не имеют type,
+      // считаем обычными herbarium.
+      if (!type) {
+        type = 'herbarium';
+      }
+
+      console.log('[onSave] page', index, 'type =', type);
+
+      // ---------------------------------------------------------
+      // 2. COVER
+      // ---------------------------------------------------------
+
+      if (type === 'cover') {
+
+        var coverData = {
+          type: 'cover'
+        };
+
+        // Собираем все элементы формы по name / data-field / id
+        page.querySelectorAll('input, textarea, select').forEach(function(el) {
+
+          var key =
+            el.dataset.field ||
+            el.getAttribute('name') ||
+            el.id;
+
+          if (!key) return;
+
+          coverData[key] = el.value || '';
+        });
+
+        // На случай, если данные хранятся непосредственно
+        // в data-атрибутах страницы.
+        if (page.dataset.cover) {
+          try {
+            Object.assign(coverData, JSON.parse(page.dataset.cover));
+          } catch (e) {
+            console.warn('[onSave] cover data JSON не разобран:', e);
+          }
+        }
+
+        pages.push(coverData);
+        return;
+      }
+
+      // ---------------------------------------------------------
+      // 3. TOC
+      // ---------------------------------------------------------
+
+      if (type === 'toc') {
+
+        var tocData = {
+          type: 'toc'
+        };
+
+        var tocText =
+          page.querySelector('[data-field="text"]') ||
+          page.querySelector('[data-toc-text]') ||
+          page.querySelector('.toc-content') ||
+          page.querySelector('.toc-list');
+
+        if (tocText) {
+          tocData.text = tocText.value !== undefined
+            ? tocText.value
+            : tocText.innerHTML;
+        }
+
+        pages.push(tocData);
+        return;
+      }
+
+      // ---------------------------------------------------------
+      // 4. DIVIDER
+      // ---------------------------------------------------------
+
+      if (type === 'divider') {
+
+        var dividerData = {
+          type: 'divider'
+        };
+
+        // Сначала пробуем явно размеченные поля.
+        page.querySelectorAll('input, textarea, select').forEach(function(el) {
+
+          var key =
+            el.dataset.field ||
+            el.getAttribute('name') ||
+            el.id;
+
+          if (!key) return;
+
+          dividerData[key] = el.value || '';
+        });
+
+        // Текстовые элементы, если они не являются input/textarea.
+        var dividerFields = [
+          'classRu',
+          'classLatin',
+          'history',
+          'text'
+        ];
+
+        dividerFields.forEach(function(field) {
+
+          if (dividerData[field] !== undefined) return;
+
+          var el = page.querySelector(
+            '[data-field="' + field + '"]'
+          );
+
+          if (el) {
+            dividerData[field] =
+              el.value !== undefined
+                ? el.value
+                : el.textContent.trim();
+          }
+        });
+
+        // Дополнительная информация о классе
+        if (page.dataset.classRu) {
+          dividerData.classRu = page.dataset.classRu;
+        }
+
+        if (page.dataset.classLatin) {
+          dividerData.classLatin = page.dataset.classLatin;
+        }
+
+        pages.push(dividerData);
+        return;
+      }
+
+      // ---------------------------------------------------------
+      // 5. CONCLUSION
+      // ---------------------------------------------------------
+
+      if (type === 'conclusion') {
+
+        var conclusionData = {
+          type: 'conclusion'
+        };
+
+        var conclusionText =
+          page.querySelector('[data-field="text"]') ||
+          page.querySelector('[data-conclusion-text]') ||
+          page.querySelector('textarea') ||
+          page.querySelector('.conclusion-text');
+
+        if (conclusionText) {
+          conclusionData.text =
+            conclusionText.value !== undefined
+              ? conclusionText.value
+              : conclusionText.textContent.trim();
+        } else {
+          // Если текст просто находится в контентном блоке
+          var content = page.querySelector('.content');
+          if (content) {
+            conclusionData.text = content.innerHTML;
+          }
+        }
+
+        pages.push(conclusionData);
+        return;
+      }
+
+      // ---------------------------------------------------------
+      // 6. HERBARIUM
+      // ---------------------------------------------------------
+
+      if (type === 'herbarium') {
+
+        var area = page.querySelector('.content-area');
+
+        // Старый herbarium обязательно должен иметь area-N.
+        if (!area || !area.id) {
+          console.warn(
+            '[onSave] Herbarium page без .content-area:',
+            page
+          );
+          return;
+        }
+
+        var id = area.id.replace('area-', '');
+
+        var borderMode = [
+          'mode-full',
+          'mode-left',
+          'mode-none'
+        ].find(function(m) {
+          return area.classList.contains(m);
+        }) || 'mode-full';
+
+        var imgBox = document.getElementById('imgBox-' + id);
+        var imgEl = document.getElementById('img-' + id);
+
+        var hasImage =
+          imgBox &&
+          imgBox.classList.contains('has-image');
+
+        var t = imageTransforms[id];
+
+        var elTitleRus =
+          document.getElementById('title-rus-' + id);
+
+        var elTitleLat =
+          document.getElementById('title-lat-' + id);
+
+        var elTaxClass =
+          document.getElementById('tax-class-' + id);
+
+        var elTaxFamily =
+          document.getElementById('tax-family-' + id);
+
+        var elTaxGenus =
+          document.getElementById('tax-genus-' + id);
+
+        var elTaxSpecies =
+          document.getElementById('tax-species-' + id);
+
+        var elDesc =
+          document.getElementById('description-' + id);
+
+        var elPlace =
+          document.getElementById('collection-place-' + id);
+
+        var elDate =
+          document.getElementById('collection-date-' + id);
+
+        pages.push({
+          type: 'herbarium',
+
+          borderMode: borderMode,
+
+          titleRus: elTitleRus
+            ? elTitleRus.value
+            : '',
+
+          titleLat: elTitleLat
+            ? elTitleLat.value
+            : '',
+
+          taxClass: elTaxClass
+            ? elTaxClass.textContent
+            : '',
+
+          taxFamily: elTaxFamily
+            ? elTaxFamily.textContent
+            : '',
+
+          taxGenus: elTaxGenus
+            ? elTaxGenus.textContent
+            : '',
+
+          taxSpecies: elTaxSpecies
+            ? elTaxSpecies.textContent
+            : '',
+
+          description: elDesc
+            ? elDesc.value
+            : '',
+
+          collectionPlace: elPlace
+            ? elPlace.value
+            : '',
+
+          collectionDate: elDate
+            ? elDate.value
+            : '',
+
+          image:
+            hasImage && imgEl
+              ? imgEl.src
+              : null,
+
+          transform: t
+            ? {
+                scale: t.scale,
+                x: t.x,
+                y: t.y
+              }
+            : null
+        });
+
+        return;
+      }
+
+      // ---------------------------------------------------------
+      // 7. Неизвестный тип
+      // ---------------------------------------------------------
+
+      console.warn(
+        '[onSave] Неизвестный тип страницы:',
+        type,
+        page
+      );
+    });
+
+    // ---------------------------------------------------------
+    // 8. Сохраняем единый объект проекта
+    // ---------------------------------------------------------
+
+    var data = {
+      schemaVersion: 2,
+      savedAt: new Date().toISOString(),
+      pages: pages
+    };
+
+    console.log(
+      '[onSave] Собрано страниц:',
+      pages.length
+    );
+
+    console.log(
+      '[onSave] Типы:',
+      pages.map(function(p) {
+        return p.type;
+      })
+    );
+
+    saveProject(data);
+
+  } catch (e) {
+
+    console.error('[onSave] ERROR:', e);
+
+    alert(
+      'Ошибка при подготовке проекта к сохранению:\n\n' +
+      e.message
+    );
+  }
 }
 
 // ===== LOAD =====
@@ -166,13 +464,18 @@ function onLoad(e) {
   loadProjectFile(file, function(err, parsed) {
     if (err) { alert(err.message); e.target.value = ''; return; }
 
-    if (!DocumentModel.fromJSON(parsed)) {
+    // Поддержка старого формата (массив) и нового (объект с pages)
+    var pagesData;
+    if (Array.isArray(parsed)) {
+      pagesData = parsed;
+    } else if (parsed && Array.isArray(parsed.pages)) {
+      pagesData = parsed.pages;
+    } else {
       alert('Не удалось загрузить проект: неподдерживаемый формат.');
       e.target.value = '';
       return;
     }
 
-    var pagesData = DocumentModel.pages;
     if (pagesData.length === 0) {
       alert('В файле не найдено ни одной страницы.');
       e.target.value = '';
