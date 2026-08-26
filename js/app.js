@@ -1,4 +1,4 @@
-// Главный модуль
+// app.js — Главный модуль
 
 var pendingAIResult = null;
 var pendingAIPageId = null;
@@ -9,11 +9,14 @@ function init() {
   if (savedProvider) document.getElementById('aiProvider').value = savedProvider;
   if (savedKey) document.getElementById('aiApiKey').value = savedKey;
   updateKeyStatus();
+
+  initConclusionSidebar();
   addPage();
   bindGlobalEvents();
 }
 
 function bindGlobalEvents() {
+  // === Управление ===
   document.getElementById('btnAddPage').addEventListener('click', addPage);
   document.getElementById('btnPrint').addEventListener('click', function() { window.print(); });
   document.getElementById('btnClear').addEventListener('click', clearAll);
@@ -27,10 +30,18 @@ function bindGlobalEvents() {
     radio.addEventListener('change', applyBorderStyle);
   });
 
+  // === AI ===
   document.getElementById('btnSaveKeys').addEventListener('click', saveKeys);
   document.getElementById('applyAiButton').addEventListener('click', applyAIResult);
   document.getElementById('cancelAiButton').addEventListener('click', closeAIPanel);
 
+  // === Документ ===
+  document.getElementById('btnAddCover').addEventListener('click', addCover);
+  document.getElementById('btnBuildDocument').addEventListener('click', onBuildDocument);
+  document.getElementById('btnRebuildToc').addEventListener('click', onRebuildToc);
+  document.getElementById('btnGenerateDividers').addEventListener('click', onGenerateDividers);
+
+  // === Порядок страниц + AI на herbarium ===
   document.getElementById('pagesContainer').addEventListener('click', function(e) {
     var btn = e.target.closest('.order-button');
     if (!btn) return;
@@ -44,14 +55,22 @@ function bindGlobalEvents() {
   });
 }
 
+// ===== HERBARIUM PAGE =====
 function addPage() {
   var container = document.getElementById('pagesContainer');
   var page = createPage();
   container.appendChild(page);
-  // === ИСПРАВЛЕНО: attachImageEditor ПОСЛЕ appendChild, когда элементы в DOM ===
   attachImageEditor(pageCounter);
   applyBorderStyle();
   updatePageOrderControls();
+}
+
+// ===== COVER PAGE =====
+function addCover() {
+  var container = document.getElementById('pagesContainer');
+  var page = createCoverPage();
+  if (!page) return;
+  container.insertBefore(page, container.firstChild);
 }
 
 function applyBorderStyle() {
@@ -69,32 +88,139 @@ function clearAll() {
   pendingAIResult = null;
   pendingAIPageId = null;
   closeAIPanel();
+  DocumentModel.reset();
   addPage();
 }
 
+// ===== SAVE =====
 function onSave() {
-  var data = getAllPagesData();
-  saveProject(data);
+  var container = document.getElementById('pagesContainer');
+  var pages = [];
+
+  container.querySelectorAll('.page').forEach(function(page) {
+    var type = page.dataset.type || 'herbarium';
+
+    if (type === 'cover') {
+      var coverData = readCoverPage(page);
+      if (coverData) pages.push(coverData);
+    }
+    else if (type === 'toc') {
+      pages.push({ type: 'toc', auto: true });
+    }
+    else if (type === 'divider') {
+      pages.push({
+        type: 'divider',
+        classRu: (page.querySelector('.divider-class-ru') || {}).textContent || '',
+        classLat: (page.querySelector('.divider-class-lat') || {}).textContent || '',
+        history: (page.querySelector('.divider-history') || {}).textContent || ''
+      });
+    }
+    else if (type === 'conclusion') {
+      pages.push({
+        type: 'conclusion',
+        text: (page.querySelector('.conclusion-text') || {}).textContent || ''
+      });
+    }
+    else {
+      // herbarium — через существующую функцию
+      var area = page.querySelector('.content-area');
+      if (!area) return;
+      var id = area.id.replace('area-', '');
+      pages.push({
+        type: 'herbarium',
+        borderMode: ['mode-full','mode-left','mode-none'].find(function(m){ return area.classList.contains(m); }) || 'mode-full',
+        titleRus: (document.getElementById('title-rus-' + id) || {}).value || '',
+        titleLat: (document.getElementById('title-lat-' + id) || {}).value || '',
+        taxClass: (document.getElementById('tax-class-' + id) || {}).textContent || '',
+        taxFamily: (document.getElementById('tax-family-' + id) || {}).textContent || '',
+        taxGenus: (document.getElementById('tax-genus-' + id) || {}).textContent || '',
+        taxSpecies: (document.getElementById('tax-species-' + id) || {}).textContent || '',
+        description: (document.getElementById('description-' + id) || {}).value || '',
+        collectionPlace: (document.getElementById('collection-place-' + id) || {}).value || '',
+        collectionDate: (document.getElementById('collection-date-' + id) || {}).value || '',
+        image: (function() {
+          var img = document.getElementById('img-' + id);
+          var box = document.getElementById('imgBox-' + id);
+          return (box && box.classList.contains('has-image') && img) ? img.src : null;
+        })(),
+        transform: (function() {
+          var t = imageTransforms[id];
+          return t ? { scale: t.scale, x: t.x, y: t.y } : null;
+        })()
+      });
+    }
+  });
+
+  DocumentModel.reset();
+  DocumentModel.setDocument({}); // пустой, т.к. cover хранится как страница
+  pages.forEach(function(p) { DocumentModel.addPage(p); });
+
+  saveProject(DocumentModel.toJSON());
 }
 
+// ===== LOAD =====
 function onLoad(e) {
   var file = e.target.files[0];
   if (!file) return;
+
   loadProjectFile(file, function(err, parsed) {
     if (err) { alert(err.message); e.target.value = ''; return; }
-    var pagesData = parsed.pages || [];
-    if (pagesData.length === 0) { alert('В файле не найдено ни одного листа.'); e.target.value = ''; return; }
-    if (!confirm('Загрузить проект (' + pagesData.length + ' лист(ов))? Текущее содержимое будет заменено.')) { e.target.value = ''; return; }
+
+    if (!DocumentModel.fromJSON(parsed)) {
+      alert('Не удалось загрузить проект: неподдерживаемый формат.');
+      e.target.value = '';
+      return;
+    }
+
+    var pagesData = DocumentModel.pages;
+    if (pagesData.length === 0) {
+      alert('В файле не найдено ни одной страницы.');
+      e.target.value = '';
+      return;
+    }
+
+    if (!confirm('Загрузить проект (' + pagesData.length + ' страниц)? Текущее содержимое будет заменено.')) {
+      e.target.value = '';
+      return;
+    }
+
     clearAllPages();
     pendingAIResult = null;
     pendingAIPageId = null;
     closeAIPanel();
-    restorePages(pagesData);
+
+    // Восстанавливаем страницы по типам
+    pagesData.forEach(function(pd) {
+      var type = pd.type || 'herbarium';
+
+      if (type === 'cover') {
+        var page = createCoverPage(pd);
+        if (page) document.getElementById('pagesContainer').appendChild(page);
+      }
+      else if (type === 'toc') {
+        var tocPage = buildTocPage ? buildTocPage() : null;
+        if (tocPage) document.getElementById('pagesContainer').appendChild(tocPage);
+      }
+      else if (type === 'divider') {
+        var divPage = createDividerPage ? createDividerPage(pd.classRu, pd.classLat, pd.history) : null;
+        if (divPage) document.getElementById('pagesContainer').appendChild(divPage);
+      }
+      else if (type === 'conclusion') {
+        var concPage = createConclusionPage ? createConclusionPage(pd.text) : null;
+        if (concPage) document.getElementById('pagesContainer').appendChild(concPage);
+      }
+      else {
+        // herbarium — через restorePages, но по одному
+        restorePages([pd]);
+      }
+    });
+
     applyBorderStyle();
     e.target.value = '';
   });
 }
 
+// ===== AI KEYS =====
 function saveKeys() {
   var provider = document.getElementById('aiProvider').value;
   var key = document.getElementById('aiApiKey').value.trim();
@@ -118,6 +244,7 @@ function updateKeyStatus() {
   }
 }
 
+// ===== AI REQUEST (herbarium) =====
 async function handleAIRequest(id) {
   var russianInput = document.getElementById('title-rus-' + id);
   var russianName = russianInput.value.trim();
@@ -178,6 +305,89 @@ function closeAIPanel() {
   document.getElementById('aiPanel').classList.remove('visible');
   pendingAIResult = null;
   pendingAIPageId = null;
+}
+
+// ===== DOCUMENT BUILDER =====
+function onBuildDocument() {
+  if (!confirm('Собрать документ?\n\nСтраницы будут перегруппированы по классам.\nТитул, оглавление и заключение встанут на места.')) return;
+  if (typeof buildDocument === 'function') {
+    buildDocument();
+  } else {
+    alert('Модуль сборки документа ещё не готов.');
+  }
+}
+
+function onRebuildToc() {
+  if (typeof rebuildToc === 'function') {
+    rebuildToc();
+  } else {
+    alert('Модуль оглавления ещё не готов.');
+  }
+}
+
+// ===== CONCLUSION SIDEBAR =====
+function initConclusionSidebar() {
+  var btnToggle = document.getElementById('btnToggleConclusion');
+  var panel = document.getElementById('conclusionPanel');
+  if (btnToggle && panel) {
+    btnToggle.addEventListener('click', function() {
+      panel.classList.toggle('visible');
+    });
+  }
+
+  var btnGen = document.getElementById('btnGenerateConclusion');
+  var btnApply = document.getElementById('btnApplyConclusion');
+  var textarea = document.getElementById('conclusionText');
+  var status = document.getElementById('conclusionStatus');
+
+  if (btnGen) {
+    btnGen.addEventListener('click', async function() {
+      var provider = localStorage.getItem('herbarium_ai_provider') || CONFIG.defaultProvider;
+      var apiKey = localStorage.getItem('herbarium_ai_key') || '';
+      if (!apiKey) { alert('Сначала сохрани API-ключ в настройках AI.'); return; }
+
+      status.textContent = 'AI составляет заключение...';
+      btnGen.disabled = true;
+
+      try {
+        var context = buildConclusionContext ? buildConclusionContext() : {};
+        var result = await requestConclusionAI(context, provider, apiKey);
+        textarea.value = result.text || '';
+        status.textContent = 'Готово. Проверь текст и нажми «Применить к документу».';
+        btnApply.disabled = false;
+      } catch (err) {
+        console.error('Conclusion AI error:', err);
+        status.textContent = 'Ошибка при генерации заключения.';
+        alert('Не удалось сгенерировать заключение.\n\n' + err.message);
+      } finally {
+        btnGen.disabled = false;
+      }
+    });
+  }
+
+  if (btnApply) {
+    btnApply.addEventListener('click', function() {
+      var text = textarea.value.trim();
+      if (!text) { alert('Текст заключения пуст.'); return; }
+
+      var existing = document.querySelector('#pagesContainer .page[data-type="conclusion"]');
+      if (existing) {
+        var textEl = existing.querySelector('.conclusion-text');
+        if (textEl) textEl.textContent = text;
+      } else {
+        var page = createConclusionPage ? createConclusionPage(text) : null;
+        if (page) document.getElementById('pagesContainer').appendChild(page);
+      }
+      status.textContent = 'Заключение применено к документу.';
+      btnApply.disabled = true;
+    });
+  }
+}
+
+function onGenerateDividers() {
+  if (!hasValidApiKey()) { alert('Сначала сохрани API-ключ в настройках AI.'); return; }
+  if (!confirm('Сгенерировать историю для всех разделителей через AI?\n\nЭто отправит ' + document.querySelectorAll('#pagesContainer .page[data-type="divider"]').length + ' запрос(ов).')) return;
+  generateAllDividers();
 }
 
 init();

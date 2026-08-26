@@ -8,6 +8,7 @@ window.createPage = function() {
 
   var page = document.createElement("div");
   page.className = "page";
+  page.dataset.type = "herbarium";
 
   page.innerHTML = `
     <div class="content-area mode-full" id="area-${id}">
@@ -91,8 +92,6 @@ window.createPage = function() {
     if (file) loadImageFile(file, id);
   });
 
-  // === attachImageEditor ВЫНЕСЕН отсюда — вызывается ПОСЛЕ appendChild ===
-
   page.querySelector(".img-zoom-out[data-id='" + id + "']").addEventListener("click", function(e) {
     e.stopPropagation();
     zoomImage(id, 0.85);
@@ -165,6 +164,7 @@ window.updatePageOrderControls = function() {
   var pages = document.querySelectorAll("#pagesContainer .page");
   pages.forEach(function(page, index) {
     var area = page.querySelector(".content-area");
+    if (!area) return;
     var pid = area.id.replace("area-", "");
     var up = page.querySelector("#order-up-" + pid);
     var down = page.querySelector("#order-down-" + pid);
@@ -178,6 +178,7 @@ window.getAllPagesData = function() {
   var data = [];
   pages.forEach(function(page) {
     var area = page.querySelector(".content-area");
+    if (!area) return;
     var id = area.id.replace("area-", "");
     var borderMode = ["mode-full", "mode-left", "mode-none"].find(function(m) {
       return area.classList.contains(m);
@@ -187,27 +188,17 @@ window.getAllPagesData = function() {
     var hasImage = document.getElementById("imgBox-" + id).classList.contains("has-image");
     var t = imageTransforms[id];
 
-    var elTitleRus = document.getElementById("title-rus-" + id);
-    var elTitleLat = document.getElementById("title-lat-" + id);
-    var elTaxClass = document.getElementById("tax-class-" + id);
-    var elTaxFamily = document.getElementById("tax-family-" + id);
-    var elTaxGenus = document.getElementById("tax-genus-" + id);
-    var elTaxSpecies = document.getElementById("tax-species-" + id);
-    var elDesc = document.getElementById("description-" + id);
-    var elPlace = document.getElementById("collection-place-" + id);
-    var elDate = document.getElementById("collection-date-" + id);
-
     data.push({
       borderMode: borderMode,
-      titleRus: elTitleRus ? elTitleRus.value : "",
-      titleLat: elTitleLat ? elTitleLat.value : "",
-      taxClass: elTaxClass ? elTaxClass.textContent : "",
-      taxFamily: elTaxFamily ? elTaxFamily.textContent : "",
-      taxGenus: elTaxGenus ? elTaxGenus.textContent : "",
-      taxSpecies: elTaxSpecies ? elTaxSpecies.textContent : "",
-      description: elDesc ? elDesc.value : "",
-      collectionPlace: elPlace ? elPlace.value : "",
-      collectionDate: elDate ? elDate.value : "",
+      titleRus: (document.getElementById("title-rus-" + id) || {}).value || "",
+      titleLat: (document.getElementById("title-lat-" + id) || {}).value || "",
+      taxClass: (document.getElementById("tax-class-" + id) || {}).textContent || "",
+      taxFamily: (document.getElementById("tax-family-" + id) || {}).textContent || "",
+      taxGenus: (document.getElementById("tax-genus-" + id) || {}).textContent || "",
+      taxSpecies: (document.getElementById("tax-species-" + id) || {}).textContent || "",
+      description: (document.getElementById("description-" + id) || {}).value || "",
+      collectionPlace: (document.getElementById("collection-place-" + id) || {}).value || "",
+      collectionDate: (document.getElementById("collection-date-" + id) || {}).value || "",
       image: hasImage ? imgEl.src : null,
       transform: t ? { scale: t.scale, x: t.x, y: t.y } : null
     });
@@ -225,7 +216,6 @@ window.restorePages = function(pagesData) {
   pagesData.forEach(function(pd) {
     var page = createPage();
     container.appendChild(page);
-    // === ИСПРАВЛЕНО: attachImageEditor ПОСЛЕ appendChild ===
     attachImageEditor(pageCounter);
 
     var id = pageCounter;

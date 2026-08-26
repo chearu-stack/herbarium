@@ -1,7 +1,7 @@
-// Сохранение / загрузка проекта
+// Сохранение и загрузка проекта. Сборка полного состояния — в app.js, здесь только сериализация.
 
-window.saveProject = function(pagesData) {
-  var json = JSON.stringify({ savedAt: new Date().toISOString(), pages: pagesData }, null, 2);
+window.saveProject = function(fullState) {
+  var json = JSON.stringify(fullState, null, 2);
   var blob = new Blob([json], { type: "application/json" });
   var url = URL.createObjectURL(blob);
   var a = document.createElement("a");
@@ -14,12 +14,8 @@ window.saveProject = function(pagesData) {
 window.loadProjectFile = function(file, callback) {
   var reader = new FileReader();
   reader.onload = function(e) {
-    try {
-      var parsed = JSON.parse(e.target.result);
-      callback(null, parsed);
-    } catch (err) {
-      callback(new Error("Не корректный JSON проекта"));
-    }
+    try { callback(null, JSON.parse(e.target.result)); }
+    catch(err) { callback(new Error("Некорректный JSON")); }
   };
   reader.onerror = function() { callback(new Error("Ошибка чтения файла")); };
   reader.readAsText(file);
